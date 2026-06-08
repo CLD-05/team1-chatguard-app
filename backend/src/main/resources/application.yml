@@ -3,8 +3,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
-    username: chatguard
-    password: ${DB_PASSWORD} 
+    username: root
+    password: ${DB_PASSWORD:chatguard1234}
 
   # 2. JPA (Hibernate) 설정
   jpa:
