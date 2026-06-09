@@ -1,5 +1,3 @@
 package com.chatguard.domain.user.dto;
 
-public class UserLoginResponse {
-
-}
+public record UserLoginResponse(Long userId, String accessToken) {}
