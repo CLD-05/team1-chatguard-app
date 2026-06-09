@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "messages", indexes = {
-    @Index(name = "idx_room_created_at", columnList = "room_id, createdAt")
+    @Index(name = "idx_room_created_at", columnList = "room_id, created_at")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
