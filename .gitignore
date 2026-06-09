@@ -211,6 +211,11 @@ fabric.properties
 hs_err_pid*
 replay_pid*
 
+### Python ###
+__pycache__/
+*.py[cod]
+.venv/
+
 ### macOS ###
 # General
 .DS_Store

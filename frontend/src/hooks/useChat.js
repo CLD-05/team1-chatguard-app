@@ -100,7 +100,7 @@ export default function useChat({ roomId, token, userId, displayName }) {
       }
       setMessages((prev) => [...prev, msg])
 
-      const BAD_WORDS = ['바보', '멍청', '욕설', '나쁜말']
+      const BAD_WORDS = ['바보', '멍청', '욕설', '민폐', '불쾌', '처참', '역겹', '나쁜말']
       if (BAD_WORDS.some((w) => content.includes(w))) {
         simulateModerationHide(id)
       }

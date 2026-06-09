@@ -1,5 +1,12 @@
 package com.chatguard.domain.chat.dto;
 
-public class ChatHideDto {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record ChatHideDto(
+    String id,
+    String action,
+    @JsonProperty("room_id")
+    Long roomId
+) {
 
 }

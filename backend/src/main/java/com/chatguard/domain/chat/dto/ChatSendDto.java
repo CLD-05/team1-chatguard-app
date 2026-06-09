@@ -1,5 +1,11 @@
 package com.chatguard.domain.chat.dto;
 
-public class ChatSendDto {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record ChatSendDto(
+    @JsonProperty("user_id")
+    Long userId,
+    String content
+) {
 
 }
