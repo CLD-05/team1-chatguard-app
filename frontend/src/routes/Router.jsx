@@ -1,36 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import LoginPage from '../pages/LoginPage'
 import HomePage from '../pages/HomePage'
 import ChatPage from '../pages/ChatPage'
-import { getToken } from '../utils/token'
 
 function PrivateRoute({ children }) {
-  return getToken() ? children : <Navigate to="/login" replace />
+  const { token } = useAuth()
+  return token ? children : <Navigate to="/" replace />
 }
 
-function Router() {
+export default function Router() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <HomePage />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/rooms/:roomId"
-        element={
-          <PrivateRoute>
-            <ChatPage />
-          </PrivateRoute>
-        }
-      />
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+      <Route path="/chat/:id" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
-
-export default Router

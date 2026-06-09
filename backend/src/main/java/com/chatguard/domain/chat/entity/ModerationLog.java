@@ -23,12 +23,14 @@ public class ModerationLog {
     @Column(name = "message_id", length = 26, nullable = false)
     private String messageId;
 
-    @Column(length = 20, nullable = false) // KEYWORD, AI 등을 담을 필드
-    private String stage;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private Stage stage;
 
-    @Column(length = 20, nullable = false) // PASS, BLOCK 등을 담을 필드
-    private String verdict;
-
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private Verdict verdict;
+    
     private Float score; // AI 판정 점수 (키워드 단계일 경우 NULL 가능)
 
     @Column(length = 50)
@@ -41,7 +43,7 @@ public class ModerationLog {
     private LocalDateTime checkedAt;
 
     @Builder
-    public ModerationLog(String messageId, String stage, String verdict, Float score, String modelVersion, String reason, LocalDateTime checkedAt) {
+    public ModerationLog(String messageId, Stage stage, Verdict verdict, Float score, String modelVersion, String reason, LocalDateTime checkedAt) {
         this.messageId = messageId;
         this.stage = stage;
         this.verdict = verdict;
