@@ -1,5 +1,53 @@
 package com.chatguard.domain.chat.entity;
 
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "moderation_logs", indexes = {
+    @Index(name = "idx_message_id", columnList = "message_id")
+})
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ModerationLog {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "message_id", length = 26, nullable = false)
+    private String messageId;
+
+    @Column(length = 20, nullable = false) // KEYWORD, AI 등을 담을 필드
+    private String stage;
+
+    @Column(length = 20, nullable = false) // PASS, BLOCK 등을 담을 필드
+    private String verdict;
+
+    private Float score; // AI 판정 점수 (키워드 단계일 경우 NULL 가능)
+
+    @Column(length = 50)
+    private String modelVersion;
+
+    @Column(length = 200)
+    private String reason;
+
+    @Column(nullable = false)
+    private LocalDateTime checkedAt;
+
+    @Builder
+    public ModerationLog(String messageId, String stage, String verdict, Float score, String modelVersion, String reason, LocalDateTime checkedAt) {
+        this.messageId = messageId;
+        this.stage = stage;
+        this.verdict = verdict;
+        this.score = score;
+        this.modelVersion = modelVersion;
+        this.reason = reason;
+        this.checkedAt = checkedAt;
+    }
 }
