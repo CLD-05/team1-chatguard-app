@@ -48,7 +48,8 @@ export async function login(username) {
     return { user: { id: 1, username, display_name: username }, token: 'mock-jwt-token' }
   }
   const res = await api.post('/login', { username })
-  return res.data
+  const { user_id, access_token } = res.data
+  return { user: { id: user_id, username, display_name: username }, token: access_token }
 }
 
 export async function getRooms() {
