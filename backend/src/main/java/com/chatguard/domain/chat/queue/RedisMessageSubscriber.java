@@ -1,51 +1,47 @@
 package com.chatguard.domain.chat.queue;
 
-import com.chatguard.domain.chat.dto.ChatHideDto;
-import com.chatguard.domain.chat.entity.MessageStatus;
-import com.chatguard.domain.chat.repository.MessageRepository;
 import com.chatguard.domain.chat.ws.ChatRoomSessionRegistry;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.connection.MessageListener;
+import java.nio.charset.StandardCharsets;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RedisMessageSubscriber {
+public class RedisMessageSubscriber implements MessageListener {
 
     private final ChatRoomSessionRegistry registry;
-    private final MessageRepository messageRepository;
     private final ObjectMapper objectMapper;
 
-    public void onChatMessage(String payload) {
+    @Override
+    public void onMessage(Message message, byte[] pattern) {
         try {
-            JsonNode root = objectMapper.readTree(payload);
-            Long roomId = root.path("payload").path("room_id").asLong();
+            String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
+            String payload = new String(message.getBody(), StandardCharsets.UTF_8);
+
+            Long roomId = parseRoomId(channel);
+            if (roomId == null) {
+                log.warn("Cannot parse roomId from channel={}", channel);
+                return;
+            }
             registry.broadcast(roomId, payload);
         } catch (Exception e) {
-            log.error("Failed to broadcast chat message", e);
+            log.error("Failed to forward room message", e);
         }
     }
 
-    public void onModerationResult(String payload) {
+    private Long parseRoomId(String channel) {
+        if (channel == null) return null;
+        String[] parts = channel.split(":");
+        if (parts.length < 2) return null;
         try {
-            JsonNode node = objectMapper.readTree(payload);
-            String messageId = node.get("messageId").asText();
-            String action = node.get("action").asText();
-            Long roomId = node.get("roomId").asLong();
-
-            MessageStatus newStatus = "delete".equals(action) ? MessageStatus.DELETED : MessageStatus.BLURRED;
-            messageRepository.findById(messageId).ifPresent(msg -> {
-                msg.changeStatus(newStatus);
-                messageRepository.save(msg);
-            });
-
-            String hidePayload = objectMapper.writeValueAsString(ChatHideDto.of(messageId, action));
-            registry.broadcast(roomId, hidePayload);
-        } catch (Exception e) {
-            log.error("Failed to process moderation result", e);
+            return Long.parseLong(parts[parts.length - 1]);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 }

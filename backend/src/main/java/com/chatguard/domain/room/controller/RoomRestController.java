@@ -2,7 +2,6 @@ package com.chatguard.domain.room.controller;
 
 import com.chatguard.domain.chat.dto.MessageDto;
 import com.chatguard.domain.chat.service.ChatService;
-import com.chatguard.domain.room.dto.RoomCreateRequest;
 import com.chatguard.domain.room.dto.RoomResponse;
 import com.chatguard.domain.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +26,6 @@ public class RoomRestController {
     @GetMapping("/{roomId}")
     public ResponseEntity<RoomResponse> getRoom(@PathVariable Long roomId) {
         return ResponseEntity.ok(roomService.getRoom(roomId));
-    }
-
-    @PostMapping
-    public ResponseEntity<RoomResponse> createRoom(@RequestBody RoomCreateRequest request) {
-        return ResponseEntity.ok(roomService.createRoom(request));
     }
 
     @GetMapping("/{roomId}/messages")

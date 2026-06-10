@@ -7,7 +7,6 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 
 @Configuration
 public class RedisConfig {
@@ -18,25 +17,13 @@ public class RedisConfig {
     }
 
     @Bean
-    public MessageListenerAdapter chatMessageListener(RedisMessageSubscriber subscriber) {
-        return new MessageListenerAdapter(subscriber, "onChatMessage");
-    }
-
-    @Bean
-    public MessageListenerAdapter moderationResultListener(RedisMessageSubscriber subscriber) {
-        return new MessageListenerAdapter(subscriber, "onModerationResult");
-    }
-
-    @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
-            MessageListenerAdapter chatMessageListener,
-            MessageListenerAdapter moderationResultListener) {
+            RedisMessageSubscriber subscriber) {
 
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.addMessageListener(chatMessageListener, new PatternTopic("chat:room:*"));
-        container.addMessageListener(moderationResultListener, new PatternTopic("mod:result:*"));
+        container.addMessageListener(subscriber, new PatternTopic("room:*"));
         return container;
     }
 }

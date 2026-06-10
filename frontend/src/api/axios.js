@@ -65,6 +65,15 @@ export async function getRooms() {
   return res.data
 }
 
+export async function getRoom(roomId) {
+  if (USE_MOCK) {
+    await delay(200)
+    return MOCK_ROOMS.find((r) => r.id === roomId) ?? null
+  }
+  const res = await api.get(`/rooms/${roomId}`)
+  return res.data
+}
+
 export async function getMessages(roomId, before) {
   if (USE_MOCK) {
     await delay(200)

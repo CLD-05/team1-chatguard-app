@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Map;
 
 @Slf4j
@@ -22,9 +23,10 @@ public class ModerationQueueProducer {
     public void enqueue(String messageId, Long roomId, String content) {
         try {
             String payload = objectMapper.writeValueAsString(Map.of(
-                    "messageId", messageId,
-                    "roomId", roomId,
-                    "content", content
+                    "message_id", messageId,
+                    "room_id", roomId,
+                    "content", content,
+                    "enqueued_at", Instant.now().toString()
             ));
             redisTemplate.opsForList().rightPush(QUEUE_KEY, payload);
         } catch (JsonProcessingException e) {

@@ -1,6 +1,5 @@
 package com.chatguard.domain.room.service;
 
-import com.chatguard.domain.room.dto.RoomCreateRequest;
 import com.chatguard.domain.room.dto.RoomResponse;
 import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
@@ -31,12 +30,4 @@ public class RoomService {
         return RoomResponse.from(room);
     }
 
-    @Transactional
-    public RoomResponse createRoom(RoomCreateRequest request) {
-        Room room = Room.builder()
-                .name(request.getName())
-                .streamerName(request.getStreamerName())
-                .build();
-        return RoomResponse.from(roomRepository.save(room));
-    }
 }

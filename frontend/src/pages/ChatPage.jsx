@@ -4,12 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import useChat from '../hooks/useChat'
 import MessageItem from '../components/chat/MessageItem'
 import ChatInput from '../components/chat/ChatInput'
+import { getRoom } from '../api/axios'
 
-export default function ChatPage() {
-  const { id }          = useParams()
-  const { user, token, logout } = useAuth()
-  const navigate        = useNavigate()
-  const roomId          = Number(id)
+function ChatRoom({ roomId, user, token, logout, navigate }) {
+  const [room, setRoom] = useState(null)
 
   const { messages, connected, sendMessage, loadMore, hasMore } = useChat({
     roomId,
@@ -23,6 +21,10 @@ export default function ChatPage() {
   const [autoScroll, setAutoScroll] = useState(true)
 
   useEffect(() => {
+    getRoom(roomId).then(setRoom).catch(() => {})
+  }, [roomId])
+
+  useEffect(() => {
     if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, autoScroll])
 
@@ -31,9 +33,6 @@ export default function ChatPage() {
     if (!el) return
     setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 80)
   }
-
-  if (!token) return <Navigate to="/" replace />
-  if (!id || isNaN(roomId)) return <Navigate to="/home" replace />
 
   const visibleMessages = messages.filter((m) => m.status !== 'DELETED')
 
@@ -78,7 +77,10 @@ export default function ChatPage() {
 
         <header className="h-12 bg-gray-900 border-b border-gray-800 flex items-center px-4 gap-3 shrink-0">
           <span className={`w-2 h-2 rounded-full shrink-0 ${connected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`} />
-          <span className="font-semibold text-white text-sm">채팅방 #{roomId}</span>
+          <span className="font-semibold text-white text-sm">
+            {room ? room.name : `채팅방 #${roomId}`}
+          </span>
+          {room && <span className="text-gray-500 text-xs">{room.streamer_name}</span>}
           <span className="text-gray-500 text-xs">{connected ? '연결됨' : '재연결 중...'}</span>
           <div className="flex-1" />
           <span className="text-xs text-gray-500">{user?.display_name}</span>
@@ -124,4 +126,16 @@ export default function ChatPage() {
       </div>
     </div>
   )
+}
+
+export default function ChatPage() {
+  const { id }                  = useParams()
+  const { user, token, logout } = useAuth()
+  const navigate                = useNavigate()
+  const roomId                  = Number(id)
+
+  if (!token) return <Navigate to="/" replace />
+  if (!id || isNaN(roomId)) return <Navigate to="/home" replace />
+
+  return <ChatRoom roomId={roomId} user={user} token={token} logout={logout} navigate={navigate} />
 }
