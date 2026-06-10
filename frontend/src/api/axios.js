@@ -23,19 +23,19 @@ api.interceptors.response.use(
 )
 
 // ─── Mock 설정 ───────────────────────────────
-export const USE_MOCK = true // 백엔드 연결 시 false 로 변경
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 
 const MOCK_ROOMS = [
-  { id: 1, name: 'LCK 결승전 채팅방', streamer_name: '페이커',    created_at: '2026-06-08T10:00:00Z' },
-  { id: 2, name: '일상 방송 채팅방',  streamer_name: '스트리머A', created_at: '2026-06-08T11:00:00Z' },
-  { id: 3, name: '게임 방송 채팅방',  streamer_name: '스트리머B', created_at: '2026-06-08T12:00:00Z' },
+  { id: 1, name: 'LCK 결승전 채팅방', streamer_name: '페이커', created_at: '2026-06-08T10:00:00Z' },
+  { id: 2, name: '일상 방송 채팅방', streamer_name: '스트리머A', created_at: '2026-06-08T11:00:00Z' },
+  { id: 3, name: '게임 방송 채팅방', streamer_name: '스트리머B', created_at: '2026-06-08T12:00:00Z' },
 ]
 
 const MOCK_MESSAGES = [
-  { id: '01J000000000000000000001', room_id: 1, user_id: 2, display_name: '관전러',   content: '경기 시작했다!!',         created_at: '2026-06-08T12:00:00Z', status: 'VISIBLE' },
-  { id: '01J000000000000000000002', room_id: 1, user_id: 3, display_name: '팬1호',    content: '페이커 진짜 미쳤다 ㅋㅋ', created_at: '2026-06-08T12:00:05Z', status: 'VISIBLE' },
+  { id: '01J000000000000000000001', room_id: 1, user_id: 2, display_name: '관전러', content: '경기 시작했다!!', created_at: '2026-06-08T12:00:00Z', status: 'VISIBLE' },
+  { id: '01J000000000000000000002', room_id: 1, user_id: 3, display_name: '팬1호', content: '페이커 진짜 미쳤다 ㅋㅋ', created_at: '2026-06-08T12:00:05Z', status: 'VISIBLE' },
   { id: '01J000000000000000000003', room_id: 1, user_id: 4, display_name: '악성유저', content: 'AI가 블러 처리한 메시지', created_at: '2026-06-08T12:00:10Z', status: 'BLURRED' },
-  { id: '01J000000000000000000004', room_id: 1, user_id: 1, display_name: '나',        content: '오늘 경기 너무 재밌다!',  created_at: '2026-06-08T12:00:15Z', status: 'VISIBLE' },
+  { id: '01J000000000000000000004', room_id: 1, user_id: 1, display_name: '나', content: '오늘 경기 너무 재밌다!', created_at: '2026-06-08T12:00:15Z', status: 'VISIBLE' },
 ]
 
 export async function login(username) {

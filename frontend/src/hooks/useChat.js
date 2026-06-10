@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getMessages, setMockWsHandler, simulateModerationHide, USE_MOCK } from '../api/axios'
 
-const WS_BASE = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+const WS_BASE = import.meta.env.VITE_WS_BASE_URL
+  ?? (import.meta.env.DEV
+    ? 'ws://127.0.0.1:8080/ws'
+    : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
 const MAX_RETRY_DELAY = 16_000
 
 function mockUlid() {
@@ -16,6 +19,8 @@ export default function useChat({ roomId, token, userId, displayName }) {
   const wsRef      = useRef(null)
   const retryDelay = useRef(1_000)
   const unmounted  = useRef(false)
+  const connectionId = useRef(0)
+  const reconnectTimer = useRef(null)
 
   const handleEvent = useCallback((event) => {
     if (event.type === 'chat.message') {
@@ -40,10 +45,17 @@ export default function useChat({ roomId, token, userId, displayName }) {
   }, [messages, roomId])
 
   useEffect(() => {
+    const currentConnectionId = connectionId.current + 1
+    connectionId.current = currentConnectionId
     unmounted.current = false
+    setConnected(false)
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current)
+      reconnectTimer.current = null
+    }
 
     getMessages(roomId).then((history) => {
-      if (!unmounted.current) {
+      if (!unmounted.current && connectionId.current === currentConnectionId) {
         setMessages(history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })))
         if (history.length < 50) setHasMore(false)
       }
@@ -59,20 +71,26 @@ export default function useChat({ roomId, token, userId, displayName }) {
     }
 
     function connect() {
-      if (unmounted.current) return
+      if (unmounted.current || connectionId.current !== currentConnectionId) return
       const ws = new WebSocket(`${WS_BASE}?token=${token}&room_id=${roomId}`)
       wsRef.current = ws
 
       ws.onopen = () => {
-        if (unmounted.current) { ws.close(); return }
+        if (unmounted.current || connectionId.current !== currentConnectionId) { ws.close(); return }
         retryDelay.current = 1_000
         setConnected(true)
       }
-      ws.onmessage = (e) => handleEvent(JSON.parse(e.data))
+      ws.onmessage = (e) => {
+        if (connectionId.current === currentConnectionId) {
+          handleEvent(JSON.parse(e.data))
+        }
+      }
       ws.onclose = () => {
-        setConnected(false)
-        if (!unmounted.current) {
-          setTimeout(connect, retryDelay.current)
+        if (connectionId.current === currentConnectionId) {
+          setConnected(false)
+        }
+        if (!unmounted.current && connectionId.current === currentConnectionId) {
+          reconnectTimer.current = setTimeout(connect, retryDelay.current)
           retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)
         }
       }
@@ -82,6 +100,10 @@ export default function useChat({ roomId, token, userId, displayName }) {
     connect()
     return () => {
       unmounted.current = true
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
       wsRef.current?.close()
     }
   }, [roomId, token, handleEvent])
