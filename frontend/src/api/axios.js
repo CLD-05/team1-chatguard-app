@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+// 기본값은 상대경로 '/api' — Vite 프록시(vite.config.js)를 통해 백엔드로 전달되며
+// 동일 출처라 CORS가 필요 없다. VITE_API_URL을 지정하면 백엔드로 직접 호출한다(이 경우 백엔드 CORS 필요).
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -23,7 +25,9 @@ api.interceptors.response.use(
 )
 
 // ─── Mock 설정 ───────────────────────────────
-export const USE_MOCK = true // 백엔드 연결 시 false 로 변경
+// 개발자별 로컬 설정(.env.local)으로 토글한다. 기본값은 mock(true).
+// 백엔드에 붙여 개발할 때만 .env.local에 VITE_USE_MOCK=false 를 둔다.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 
 const MOCK_ROOMS = [
   { id: 1, name: 'LCK 결승전 채팅방', streamer_name: '페이커',    created_at: '2026-06-08T10:00:00Z' },
