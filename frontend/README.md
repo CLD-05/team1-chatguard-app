@@ -43,19 +43,24 @@ src/
 # 의존성 설치
 npm install
 
+# 로컬 환경설정 파일 생성 (최초 1회)
+cp .env.example .env.local
+
 # 개발 서버 실행
 npm run dev
 ```
 
 개발 서버: `http://localhost:3000`
 
+환경설정은 `.env.local`(개발자별, 커밋 안 됨)로 관리합니다. 설정 가능한 값은 `.env.example` 참고.
+
 ## Mock 모드
 
-백엔드 없이도 동작 확인이 가능합니다.
+백엔드 없이도 동작을 확인할 수 있습니다. 모드는 코드가 아니라 `.env.local`로 토글합니다.
 
-```js
-// src/api/axios.js
-export const USE_MOCK = true  // 백엔드 연결 시 false로 변경
+```bash
+# .env.local
+VITE_USE_MOCK=true    # 기본값 — 가짜 데이터로 동작 (변수 미설정 시에도 mock)
 ```
 
 **Mock 데이터**
@@ -65,6 +70,13 @@ export const USE_MOCK = true  // 백엔드 연결 시 false로 변경
 
 ## 백엔드 연결
 
-1. `src/api/axios.js` 에서 `USE_MOCK = false` 로 변경
-2. 백엔드 서버 실행 (`http://localhost:8080`)
-3. `npm run dev` 실행 — `/api`, `/ws` 요청은 자동으로 백엔드로 프록시됩니다.
+로컬에서 프론트(3000) ↔ 백엔드(8080)를 붙여 개발하는 방법입니다. 프론트는 동일 출처(`localhost:3000`)로만 요청하고 Vite 프록시가 백엔드로 넘겨주므로 **CORS 설정이 필요 없습니다.**
+
+1. 백엔드 서버를 먼저 실행합니다 (`http://localhost:8080`). 실행 방법은 `../backend/README.md` 참고.
+2. `.env.local` 에서 mock을 끕니다.
+   ```bash
+   VITE_USE_MOCK=false
+   ```
+3. `npm run dev` 실행 — `/api`, `/ws` 요청은 `vite.config.js`의 프록시 설정에 따라 자동으로 백엔드(`localhost:8080`)로 전달됩니다.
+
+> 프록시를 거치지 않고 백엔드를 직접 호출해야 하는 경우에만 `.env.local`에 `VITE_API_URL`(절대 URL)을 지정합니다. 이때는 백엔드에 CORS 설정이 필요합니다.
