@@ -1,6 +1,7 @@
 package com.chatguard.global.auth;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
@@ -24,10 +25,14 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
         if (request instanceof ServletServerHttpRequest servletRequest) {
             String token = servletRequest.getServletRequest().getParameter("token");
             
-            if (token != null && jwtProvider.validateToken(token)) {
-                Long userId = jwtProvider.getUserIdFromToken(token);
-                attributes.put("userId", userId); 
-                return true;
+            if (token != null) {
+                io.jsonwebtoken.Claims claims = jwtProvider.getClaimsIfValid(token);
+                
+                if (claims != null) {
+                    Long userId = Long.parseLong(claims.getSubject());
+                    attributes.put("userId", userId); 
+                    return true;
+                }
             }
         }
         

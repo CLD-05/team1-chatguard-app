@@ -35,21 +35,15 @@ public class JwtProvider {
                 .compact();
     }
     
-    public boolean validateToken(String token) {
+    public Claims getClaimsIfValid(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return true;
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
         } catch (Exception e) {
-            return false; 
+            return null;
         }
-    }
-
-    public Long getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return Long.parseLong(claims.getSubject());
     }
 }

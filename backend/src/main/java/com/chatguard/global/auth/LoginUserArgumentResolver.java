@@ -1,6 +1,5 @@
 package com.chatguard.global.auth;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -11,16 +10,15 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 @Component
 public class LoginUserArgumentResolver implements HandlerMethodArgumentResolver {
 
-    @Override
+	@Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(LoginUser.class)
-                && parameter.getParameterType().equals(Long.class);
+                && (parameter.getParameterType().equals(Long.class) || parameter.getParameterType().equals(long.class));
     }
 
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        HttpServletRequest request = (HttpServletRequest) webRequest.getNativeRequest();
-        return request.getAttribute("userId");
+        return AuthContext.getUserId();
     }
 }
