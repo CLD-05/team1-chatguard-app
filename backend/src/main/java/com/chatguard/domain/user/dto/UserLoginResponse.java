@@ -13,5 +13,4 @@ public record UserLoginResponse(
         String displayName
     ) {
     }
-
 }

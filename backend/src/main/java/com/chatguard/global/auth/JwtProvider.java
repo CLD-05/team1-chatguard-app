@@ -18,9 +18,8 @@ public class JwtProvider {
     private final long expirationMillis;
 
     public JwtProvider(
-        @Value("${jwt.secret:chatguard-super-secret-key-for-local-dev-environment}") String secret,
-        @Value("${jwt.expiration:86400000}") long expirationMillis
-    ) {
+            @Value("${jwt.secret:chatguard-super-secret-key-for-local-dev-environment}") String secret,
+            @Value("${jwt.expiration:86400000}") long expirationMillis) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMillis = expirationMillis;
     }
@@ -30,26 +29,47 @@ public class JwtProvider {
         Date expiresAt = new Date(now.getTime() + expirationMillis);
 
         return Jwts.builder()
-            .setSubject(String.valueOf(user.getId()))
-            .claim("username", user.getUsername())
-            .setIssuedAt(now)
-            .setExpiration(expiresAt)
-            .signWith(key, SignatureAlgorithm.HS256)
-            .compact();
+                .setSubject(String.valueOf(user.getId()))
+                .claim("username", user.getUsername())
+                .setIssuedAt(now)
+                .setExpiration(expiresAt)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
     }
 
     public Long getUserId(String token) {
+        return Long.valueOf(parseClaims(token).getSubject());
+    }
+
+    public String generateToken(Long userId) {
+        Date now = new Date();
+        Date expiresAt = new Date(now.getTime() + expirationMillis);
+
+        return Jwts.builder()
+                .setSubject(String.valueOf(userId))
+                .setIssuedAt(now)
+                .setExpiration(expiresAt)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public Claims getClaimsIfValid(String token) {
+        try {
+            return parseClaims(token);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Claims parseClaims(String token) {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("token is required");
         }
 
-        Claims claims = Jwts.parserBuilder()
-            .setSigningKey(key)
-            .build()
-            .parseClaimsJws(token)
-            .getBody();
-
-        return Long.valueOf(claims.getSubject());
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
-
 }

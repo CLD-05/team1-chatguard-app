@@ -13,7 +13,7 @@ function mockUlid() {
 
 export default function useChat({ roomId, token, userId, displayName }) {
   const [messages, setMessages]   = useState([])
-  const [connected, setConnected] = useState(false)
+  const [connected, setConnected] = useState(USE_MOCK)
   const [hasMore, setHasMore]     = useState(true)
 
   const wsRef      = useRef(null)
@@ -48,7 +48,6 @@ export default function useChat({ roomId, token, userId, displayName }) {
     const currentConnectionId = connectionId.current + 1
     connectionId.current = currentConnectionId
     unmounted.current = false
-    setConnected(false)
     if (reconnectTimer.current) {
       clearTimeout(reconnectTimer.current)
       reconnectTimer.current = null
@@ -63,7 +62,6 @@ export default function useChat({ roomId, token, userId, displayName }) {
 
     if (USE_MOCK) {
       setMockWsHandler(handleEvent)
-      setConnected(true)
       return () => {
         unmounted.current = true
         setMockWsHandler(null)

@@ -51,7 +51,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
 
         Long roomId = (Long) session.getAttributes().get("roomId");
-        Long userId = jwtProvider.getUserId(getStringQueryParam(session.getUri(), "token"));
+        Long userId = (Long) session.getAttributes().get("userId");
+        if (userId == null) {
+            userId = jwtProvider.getUserId(getStringQueryParam(session.getUri(), "token"));
+        }
         String content = root.path("payload").path("content").asText(null);
 
         chatService.sendMessage(roomId, userId, content);
