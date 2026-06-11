@@ -37,10 +37,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         if ("chat.send".equals(type)) {
             Long userId = getUserId(session);
+            Long sessionRoomId = getRoomId(session);
             if (userId == null) return;
 
             JsonNode payload = root.path("payload");
             ChatSendDto dto = objectMapper.treeToValue(payload, ChatSendDto.class);
+            if (!sessionRoomId.equals(dto.getRoomId())) {
+                String errorMsg = "{\"type\":\"error\",\"payload\":{\"code\":\"ROOM_MISMATCH\",\"message\":\"방 정보가 일치하지 않습니다.\"}}";
+                session.sendMessage(new TextMessage(errorMsg));
+                return;
+            }
             chatService.sendMessage(userId, dto);
         }
     }
