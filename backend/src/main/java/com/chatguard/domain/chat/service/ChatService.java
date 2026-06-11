@@ -96,17 +96,18 @@ public class ChatService {
             messageRepository.save(message);
 
             Long roomId = room.getId();
+            try {
+                moderationQueueProducer.enqueue(messageId, roomId, content);
+            } catch (Exception e) {
+                log.error("Failed to enqueue moderation task for messageId={}", messageId, e);
+                throw new CustomException(ErrorCode.INTERNAL);
+            }
+
             ChatMessageDto chatMessageDto = ChatMessageDto.from(message);
-            
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    try {
-                        moderationQueueProducer.enqueue(messageId, roomId, content);
-                        publish(roomId, chatMessageDto);
-                    } catch (Exception e) {
-                        log.error("Failed to enqueue or publish messageId={}", messageId, e);
-                    }
+                    publish(roomId, chatMessageDto);
                 }
             });
         }
