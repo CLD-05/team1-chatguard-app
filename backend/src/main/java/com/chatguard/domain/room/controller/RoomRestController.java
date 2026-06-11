@@ -6,9 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.chatguard.domain.chat.dto.MessageDto;
@@ -26,10 +26,10 @@ public class RoomRestController {
     private final RoomService roomService;
     private final ChatService chatService;
 
-	@GetMapping
-	public ResponseEntity<List<RoomResponse>> getRooms() {
-		return ResponseEntity.ok(roomService.getRooms());
-	}
+    @GetMapping
+    public ResponseEntity<List<RoomResponse>> getRooms() {
+        return ResponseEntity.ok(roomService.getRooms());
+    }
 
     @PostMapping
     public ResponseEntity<RoomResponse> createRoom(@RequestBody RoomCreateRequest request) {
