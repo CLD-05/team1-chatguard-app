@@ -20,11 +20,15 @@ public record MessageDto(
     MessageStatus status
 ) {
     public static MessageDto from(Message message) {
+        return from(message, message.getUser().getDisplayName());
+    }
+
+    public static MessageDto from(Message message, String displayName) {
         return new MessageDto(
             message.getId(),
             message.getRoom().getId(),
             message.getUser().getId(),
-            message.getUser().getDisplayName(),
+            displayName,
             message.getContent(),
             message.getCreatedAt(),
             message.getStatus()

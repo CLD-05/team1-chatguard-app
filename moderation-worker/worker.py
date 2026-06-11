@@ -11,15 +11,16 @@ from prometheus_client import Counter, Histogram, start_http_server
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_QUEUE_NAME = os.getenv("REDIS_QUEUE_NAME", "mod:queue")
+MOD_QUEUE_KEY = os.getenv("MOD_QUEUE_KEY") or os.getenv("REDIS_QUEUE_NAME", "mod:queue")
 ROOM_CHANNEL_PREFIX = os.getenv("ROOM_CHANNEL_PREFIX", "room:")
 
-DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true")
+DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true")
 DB_USER = os.getenv("DB_USER") or os.getenv("DB_USERNAME", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
 MODERATOR_MODE = os.getenv("MODERATOR_MODE", "mock").lower()
 UNSMILE_MODEL_ID = os.getenv("UNSMILE_MODEL_ID", "smilegate-ai/kor_unsmile")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "unsmile-v1")
 BLOCK_THRESHOLD = float(os.getenv("BLOCK_THRESHOLD", "0.70"))
 METRICS_PORT = int(os.getenv("METRICS_PORT", "8000"))
 
@@ -86,8 +87,8 @@ def classify_with_mock(content):
     normalized = content.lower()
     matched = next((term for term in MOCK_TOXIC_TERMS if term in normalized), None)
     if matched:
-        return build_result(0.90, "mock-worker", f"mock matched term: {matched}")
-    return build_result(0.05, "mock-worker", "mock keyword score")
+        return build_result(0.90, f"{MODEL_VERSION}-mock", f"mock matched term: {matched}")
+    return build_result(0.05, f"{MODEL_VERSION}-mock", "mock keyword score")
 
 
 def classify_with_unsmile(content):
@@ -101,7 +102,7 @@ def classify_with_unsmile(content):
 
     raw_result = _classifier(content)
     toxic_score, top_label = extract_toxic_score(raw_result)
-    return build_result(toxic_score, "unsmile", f"unsmile:{top_label}={toxic_score:.3f}")
+    return build_result(toxic_score, MODEL_VERSION, f"unsmile:{top_label}={toxic_score:.3f}")
 
 
 def extract_toxic_score(raw_result):
@@ -208,9 +209,9 @@ def apply_result_to_db(job, result):
             cursor.execute(
                 """
                 INSERT INTO moderation_logs
-                    (message_id, stage, verdict, score, model_version, reason, checked_at)
+                    (message_id, stage, verdict, score, model_version, reason, content, checked_at)
                 VALUES
-                    (%s, %s, %s, %s, %s, %s, %s)
+                    (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     message_id,
@@ -219,6 +220,7 @@ def apply_result_to_db(job, result):
                     float(result["score"]),
                     result["model_version"],
                     result["reason"],
+                    job.get("content") if result["verdict"] == "BLOCK" else None,
                     checked_at,
                 ),
             )
@@ -273,7 +275,7 @@ def parse_enqueued_at(value):
 
 
 def requeue_job(redis_client, raw):
-    redis_client.lpush(REDIS_QUEUE_NAME, raw)
+    redis_client.lpush(MOD_QUEUE_KEY, raw)
     log("requeued moderation job after temporary failure")
 
 
@@ -288,7 +290,7 @@ def main():
     log(
         "worker started "
         f"mode={MODERATOR_MODE} "
-        f"queue={REDIS_QUEUE_NAME} "
+        f"queue={MOD_QUEUE_KEY} "
         f"redis={REDIS_HOST}:{REDIS_PORT} "
         f"db={DB_URL} "
         f"metrics_port={METRICS_PORT}"
@@ -297,7 +299,7 @@ def main():
     while True:
         raw = None
         try:
-            item = redis_client.brpop(REDIS_QUEUE_NAME, timeout=5)
+            item = redis_client.brpop(MOD_QUEUE_KEY, timeout=5)
             if item is None:
                 continue
             _, raw = item

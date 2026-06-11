@@ -23,12 +23,13 @@ public class JwtProvider {
         this.expiration = expiration;
     }
 
-    public String generateToken(Long userId) {
+    public String generateToken(Long userId, String displayName) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .setSubject(userId.toString())
+                .claim("display_name", displayName)
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)

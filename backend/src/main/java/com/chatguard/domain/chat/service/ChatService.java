@@ -14,12 +14,12 @@ import com.chatguard.domain.chat.repository.ModerationLogRepository;
 import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.chatguard.domain.user.entity.User;
-import com.chatguard.domain.user.repository.UserRepository;
 import com.chatguard.global.error.CustomException;
 import com.chatguard.global.error.ErrorCode;
 import com.chatguard.global.util.UlidGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +30,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
@@ -44,20 +45,19 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final ModerationLogRepository moderationLogRepository;
     private final RoomRepository roomRepository;
-    private final UserRepository userRepository;
     private final ModerationQueueProducer moderationQueueProducer;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final EntityManager entityManager;
 
     @Transactional
-    public SendMessageResult sendMessage(Long userId, ChatSendDto dto) {
+    public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto) {
         Long roomId = required(dto.roomId(), "room_id");
         String content = normalizeContent(dto.content());
 
         Room room = roomRepository.findById(roomId)
             .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new CustomException(ErrorCode.INVALID_TOKEN));
+        User user = entityManager.getReference(User.class, userId);
 
         if (KEYWORD_FILTER.stream().anyMatch(content::contains)) {
             moderationLogRepository.save(ModerationLog.builder()
@@ -65,7 +65,7 @@ public class ChatService {
                 .stage(Stage.KEYWORD)
                 .verdict(Verdict.BLOCK)
                 .content(content)
-                .checkedAt(LocalDateTime.now())
+                .checkedAt(nowUtc())
                 .build());
             return SendMessageResult.BLOCKED_KEYWORD;
         }
@@ -75,14 +75,15 @@ public class ChatService {
             .room(room)
             .user(user)
             .content(content)
-            .createdAt(LocalDateTime.now())
+            .createdAt(nowUtc())
             .build());
+
+        moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
-                publish(roomId, ChatMessageDto.from(saved));
+                publish(roomId, ChatMessageDto.from(saved, displayName));
             }
         });
         return SendMessageResult.SENT;
@@ -134,6 +135,10 @@ public class ChatService {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         return value.trim();
+    }
+
+    private LocalDateTime nowUtc() {
+        return LocalDateTime.now(ZoneOffset.UTC);
     }
 
     public enum SendMessageResult {

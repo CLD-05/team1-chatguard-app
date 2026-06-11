@@ -9,4 +9,8 @@ public record ChatMessageDto(
     public static ChatMessageDto from(Message message) {
         return new ChatMessageDto("chat.message", MessageDto.from(message));
     }
+
+    public static ChatMessageDto from(Message message, String displayName) {
+        return new ChatMessageDto("chat.message", MessageDto.from(message, displayName));
+    }
 }

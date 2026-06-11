@@ -20,7 +20,7 @@ public class ModerationQueueProducer {
     public ModerationQueueProducer(
         StringRedisTemplate redisTemplate,
         ObjectMapper objectMapper,
-        @Value("${moderation.queue-name:mod:queue}") String queueName
+        @Value("${MOD_QUEUE_KEY:${moderation.queue-name:mod:queue}}") String queueName
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
@@ -34,6 +34,9 @@ public class ModerationQueueProducer {
         } catch (JsonProcessingException e) {
             log.error("Failed to enqueue moderation task for messageId={}", messageId, e);
             throw new IllegalStateException("Failed to serialize moderation job", e);
+        } catch (RuntimeException e) {
+            log.error("Failed to enqueue moderation task for messageId={}", messageId, e);
+            throw new IllegalStateException("Failed to enqueue moderation job", e);
         }
     }
 

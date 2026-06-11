@@ -32,8 +32,10 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
                 if (claims != null) {
                     Long userId = Long.parseLong(claims.getSubject());
                     Long roomId = Long.parseLong(roomIdParam);
+                    String displayName = claims.get("display_name", String.class);
                     attributes.put("userId", userId);
                     attributes.put("roomId", roomId);
+                    attributes.put("displayName", displayName);
                     return true;
                 }
             }
