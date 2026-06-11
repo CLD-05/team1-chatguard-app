@@ -1,12 +1,21 @@
 package com.chatguard.domain.chat.entity;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "moderation_logs", indexes = {
@@ -30,8 +39,8 @@ public class ModerationLog {
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     private Verdict verdict;
-    
-    private Float score; // AI 판정 점수 (키워드 단계일 경우 NULL 가능)
+
+    private Float score;
 
     @Column(length = 50)
     private String modelVersion;
@@ -47,7 +56,16 @@ public class ModerationLog {
     private LocalDateTime checkedAt;
 
     @Builder
-    public ModerationLog(String messageId, Stage stage, Verdict verdict, Float score, String modelVersion, String reason, String content, LocalDateTime checkedAt) {
+    public ModerationLog(
+        String messageId,
+        Stage stage,
+        Verdict verdict,
+        Float score,
+        String modelVersion,
+        String reason,
+        String content,
+        LocalDateTime checkedAt
+    ) {
         this.messageId = messageId;
         this.stage = stage;
         this.verdict = verdict;
