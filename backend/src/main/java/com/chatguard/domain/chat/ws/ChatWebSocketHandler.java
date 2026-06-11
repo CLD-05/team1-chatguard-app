@@ -1,16 +1,20 @@
 package com.chatguard.domain.chat.ws;
 
-import com.chatguard.domain.chat.dto.ChatSendDto;
-import com.chatguard.domain.chat.service.ChatService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Map;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import com.chatguard.domain.chat.dto.ChatSendDto;
+import com.chatguard.domain.chat.service.ChatService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -42,20 +46,24 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
             JsonNode payload = root.path("payload");
             ChatSendDto dto = objectMapper.treeToValue(payload, ChatSendDto.class);
+            
             if (!sessionRoomId.equals(dto.getRoomId())) {
-                String errorMsg = "{\"type\":\"error\",\"payload\":{\"code\":\"ROOM_MISMATCH\",\"message\":\"방 정보가 일치하지 않습니다.\"}}";
-                session.sendMessage(new TextMessage(errorMsg));
+                Map<String, Object> errorEnvelope = Map.of(
+                    "type", "error",
+                    "payload", Map.of("code", "ROOM_MISMATCH", "message", "방 정보가 일치하지 않습니다.")
+                );
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(errorEnvelope)));
                 return;
             }
 
             try {
                 chatService.sendMessage(userId, dto);
             } catch (com.chatguard.global.error.CustomException e) {
-                String errorMsg = String.format(
-                    "{\"type\":\"error\",\"payload\":{\"code\":\"%s\",\"message\":\"%s\"}}",
-                    e.getErrorCode().name(), e.getMessage()
+                Map<String, Object> errorEnvelope = Map.of(
+                    "type", "error",
+                    "payload", Map.of("code", e.getErrorCode().name(), "message", e.getMessage())
                 );
-                session.sendMessage(new TextMessage(errorMsg));
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(errorEnvelope)));
             }
         }
     }
