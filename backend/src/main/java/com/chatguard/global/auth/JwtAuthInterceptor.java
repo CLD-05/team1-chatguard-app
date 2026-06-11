@@ -42,9 +42,4 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         AuthContext.setUserId(Long.parseLong(claims.getSubject()));
         return true;
     }
-
-    @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
-        AuthContext.clear();
-    }
 }

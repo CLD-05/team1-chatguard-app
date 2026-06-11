@@ -1,6 +1,5 @@
 package com.chatguard.global.auth;
 
-import com.chatguard.domain.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -14,62 +13,37 @@ import java.util.Date;
 
 @Component
 public class JwtProvider {
+
     private final Key key;
-    private final long expirationMillis;
+    private final long expiration;
 
-    public JwtProvider(
-            @Value("${jwt.secret:chatguard-super-secret-key-for-local-dev-environment}") String secret,
-            @Value("${jwt.expiration:86400000}") long expirationMillis) {
+    public JwtProvider(@Value("${jwt.secret}") String secret,
+                       @Value("${jwt.expiration}") long expiration) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationMillis = expirationMillis;
-    }
-
-    public String createToken(User user) {
-        Date now = new Date();
-        Date expiresAt = new Date(now.getTime() + expirationMillis);
-
-        return Jwts.builder()
-                .setSubject(String.valueOf(user.getId()))
-                .claim("username", user.getUsername())
-                .setIssuedAt(now)
-                .setExpiration(expiresAt)
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
-    }
-
-    public Long getUserId(String token) {
-        return Long.valueOf(parseClaims(token).getSubject());
+        this.expiration = expiration;
     }
 
     public String generateToken(Long userId) {
         Date now = new Date();
-        Date expiresAt = new Date(now.getTime() + expirationMillis);
+        Date validity = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
-                .setSubject(String.valueOf(userId))
+                .setSubject(userId.toString())
                 .setIssuedAt(now)
-                .setExpiration(expiresAt)
+                .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public Claims getClaimsIfValid(String token) {
         try {
-            return parseClaims(token);
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private Claims parseClaims(String token) {
-        if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("token is required");
-        }
-
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
     }
 }
