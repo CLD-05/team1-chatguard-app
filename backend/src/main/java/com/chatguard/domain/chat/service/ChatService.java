@@ -1,5 +1,18 @@
 package com.chatguard.domain.chat.service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import com.chatguard.domain.chat.dto.ChatMessageDto;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.dto.MessageDto;
@@ -8,9 +21,9 @@ import com.chatguard.domain.chat.entity.MessageStatus;
 import com.chatguard.domain.chat.entity.ModerationLog;
 import com.chatguard.domain.chat.entity.Stage;
 import com.chatguard.domain.chat.entity.Verdict;
-import com.chatguard.domain.chat.repository.ModerationLogRepository;
 import com.chatguard.domain.chat.queue.ModerationQueueProducer;
 import com.chatguard.domain.chat.repository.MessageRepository;
+import com.chatguard.domain.chat.repository.ModerationLogRepository;
 import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.chatguard.domain.user.entity.User;
@@ -20,20 +33,9 @@ import com.chatguard.global.error.ErrorCode;
 import com.chatguard.global.util.UlidGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Slf4j
 @Service
@@ -45,7 +47,7 @@ public class ChatService {
     private static final Set<String> KEYWORD_FILTER = Set.of("욕설1", "욕설2", "금칙어");
 
     private final MessageRepository messageRepository;
-    private final ModerationLogRepository moderationLogRepository;
+    private final ModerationLogService moderationLogService;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
     private final ModerationQueueProducer moderationQueueProducer;
@@ -72,8 +74,7 @@ public class ChatService {
         String messageId = UlidGenerator.generate();
 
         if (matchedKeyword.isPresent()) {
-        	log.info("검열 로그 저장 시도 - messageId: {}, reason: {}", messageId, matchedKeyword.orElse("없음"));
-            moderationLogRepository.saveInNewTransaction(ModerationLog.builder()
+        	moderationLogService.saveInNewTransaction(ModerationLog.builder()
                     .messageId(messageId)
                     .stage(Stage.KEYWORD)
                     .verdict(Verdict.BLOCK)

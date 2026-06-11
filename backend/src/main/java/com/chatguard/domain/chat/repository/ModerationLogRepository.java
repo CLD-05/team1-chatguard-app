@@ -8,8 +8,4 @@ import com.chatguard.domain.chat.entity.ModerationLog;
 
 public interface ModerationLogRepository extends JpaRepository<ModerationLog, Long> {
 
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
-    default ModerationLog saveInNewTransaction(ModerationLog log) {
-        return save(log);
-    }
 }
