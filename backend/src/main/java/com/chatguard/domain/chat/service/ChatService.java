@@ -54,44 +54,48 @@ public class ChatService {
     public void sendMessage(Long userId, ChatSendDto dto) {
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
+        
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND)); 
 
         String content = dto.getContent();
         boolean blocked = KEYWORD_FILTER.stream().anyMatch(content::contains);
-
-        Message message = Message.builder()
-                .id(UlidGenerator.generate())
-                .room(room)
-                .user(user)
-                .content(content)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        if (blocked) {
-            message.changeStatus(MessageStatus.DELETED);
-        }
-
-        messageRepository.save(message);
+        String messageId = UlidGenerator.generate();
 
         if (blocked) {
             moderationLogRepository.save(ModerationLog.builder()
-                    .messageId(message.getId())
+                    .messageId(messageId)
                     .stage(Stage.KEYWORD)
                     .verdict(Verdict.BLOCK)
+                    .content(content)
                     .checkedAt(LocalDateTime.now())
                     .build());
-        }
+            
+            throw new CustomException(ErrorCode.MESSAGE_BLOCKED);
+            
+        } else {
+            Message message = Message.builder()
+                    .id(messageId)
+                    .room(room)
+                    .user(user)
+                    .content(content)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            
+            messageRepository.save(message);
 
-        if (!blocked) {
             Long roomId = room.getId();
-            String messageId = message.getId();
             ChatMessageDto chatMessageDto = ChatMessageDto.from(message);
+            
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    publish(roomId, chatMessageDto);
-                    moderationQueueProducer.enqueue(messageId, roomId, content);
+                    try {
+                        moderationQueueProducer.enqueue(messageId, roomId, content);
+                        publish(roomId, chatMessageDto);
+                    } catch (Exception e) {
+                        log.error("Failed to enqueue or publish messageId={}", messageId, e);
+                    }
                 }
             });
         }
