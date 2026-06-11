@@ -1,14 +1,21 @@
 package com.chatguard.domain.room.controller;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.chatguard.domain.chat.dto.MessageDto;
 import com.chatguard.domain.chat.service.ChatService;
 import com.chatguard.domain.room.dto.RoomResponse;
 import com.chatguard.domain.room.service.RoomService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -33,6 +40,11 @@ public class RoomRestController {
             @PathVariable Long roomId,
             @RequestParam(required = false) String before,
             @RequestParam(defaultValue = "50") int limit) {
-        return ResponseEntity.ok(chatService.getHistory(roomId, before, limit));
+    	
+        int safeLimit = Math.min(limit, 100);
+        List<MessageDto> history = chatService.getHistory(roomId, before, safeLimit);
+        Collections.reverse(history);
+        
+        return ResponseEntity.ok(history);
     }
 }

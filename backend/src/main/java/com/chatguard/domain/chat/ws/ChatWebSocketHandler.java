@@ -47,7 +47,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 session.sendMessage(new TextMessage(errorMsg));
                 return;
             }
-            chatService.sendMessage(userId, dto);
+
+            try {
+                chatService.sendMessage(userId, dto);
+            } catch (com.chatguard.global.error.CustomException e) {
+                String errorMsg = String.format(
+                    "{\"type\":\"error\",\"payload\":{\"code\":\"%s\",\"message\":\"%s\"}}",
+                    e.getErrorCode().name(), e.getMessage()
+                );
+                session.sendMessage(new TextMessage(errorMsg));
+            }
         }
     }
 

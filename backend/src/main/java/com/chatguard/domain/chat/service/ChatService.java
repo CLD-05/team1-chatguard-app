@@ -30,7 +30,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -52,23 +54,31 @@ public class ChatService {
 
     @Transactional
     public void sendMessage(Long userId, ChatSendDto dto) {
+        String content = dto.getContent();
+        if (content == null || content.isBlank() || content.length() > 500) {
+            throw new CustomException(ErrorCode.INVALID_PAYLOAD);
+        }
+
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
-        
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND)); 
 
-        String content = dto.getContent();
-        boolean blocked = KEYWORD_FILTER.stream().anyMatch(content::contains);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Optional<String> matchedKeyword = KEYWORD_FILTER.stream()
+                .filter(content::contains)
+                .findFirst();
+
         String messageId = UlidGenerator.generate();
 
-        if (blocked) {
+        if (matchedKeyword.isPresent()) {
             moderationLogRepository.save(ModerationLog.builder()
                     .messageId(messageId)
                     .stage(Stage.KEYWORD)
                     .verdict(Verdict.BLOCK)
+                    .reason(matchedKeyword.get())
                     .content(content)
-                    .checkedAt(LocalDateTime.now())
+                    .checkedAt(LocalDateTime.now(ZoneOffset.UTC))
                     .build());
             
             throw new CustomException(ErrorCode.MESSAGE_BLOCKED);
@@ -79,7 +89,7 @@ public class ChatService {
                     .room(room)
                     .user(user)
                     .content(content)
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now(ZoneOffset.UTC))
                     .build();
             
             messageRepository.save(message);
@@ -103,9 +113,10 @@ public class ChatService {
 
     public List<MessageDto> getHistory(Long roomId, String beforeId, int limit) {
         PageRequest page = PageRequest.of(0, limit);
+        
         List<Message> messages = (beforeId != null && !beforeId.isBlank())
-                ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdAsc(roomId, beforeId, MessageStatus.DELETED, page)
-                : messageRepository.findByRoomIdAndStatusNotOrderByIdAsc(roomId, MessageStatus.DELETED, page);
+                ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(roomId, beforeId, MessageStatus.DELETED, page)
+                : messageRepository.findByRoomIdAndStatusNotOrderByIdDesc(roomId, MessageStatus.DELETED, page);
 
         return messages.stream().map(MessageDto::from).toList();
     }
