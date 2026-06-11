@@ -39,9 +39,6 @@ public class ModerationLog {
     @Column(length = 200)
     private String reason;
     
-    @Column(columnDefinition = "TEXT")
-    private String content;
-
     @Lob
     @Column(columnDefinition = "TEXT")
     private String content;
