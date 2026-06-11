@@ -72,7 +72,8 @@ public class ChatService {
         String messageId = UlidGenerator.generate();
 
         if (matchedKeyword.isPresent()) {
-            moderationLogRepository.save(ModerationLog.builder()
+        	log.info("검열 로그 저장 시도 - messageId: {}, reason: {}", messageId, matchedKeyword.orElse("없음"));
+            moderationLogRepository.saveInNewTransaction(ModerationLog.builder()
                     .messageId(messageId)
                     .stage(Stage.KEYWORD)
                     .verdict(Verdict.BLOCK)
