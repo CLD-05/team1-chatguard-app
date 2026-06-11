@@ -1,3 +1,10 @@
+# base가 DB_USER/DB_PASSWORD를 폴백 없이 요구하므로(fail-fast),
+# 테스트 프로파일은 자체 자격증명을 제공한다(테스트 MySQL = root·빈 비밀번호).
+spring:
+  datasource:
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+
 jwt:
   # 테스트 통과용 가짜 비밀키 (아무 의미 없는 32바이트 이상 문자열)
   secret: dummy-secret-key-for-testing-purposes-only-1234

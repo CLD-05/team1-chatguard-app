@@ -1,6 +1,4 @@
 spring:
-  profiles:
-    active: local
   # 로컬: .env를 properties로 읽어 ${DB_PASSWORD} 등을 단일 소스로 해석한다.
   # optional이라 .env가 없는 운영/CI에서는 무시되고 실제 환경변수/Secret이 쓰인다.
   config:
@@ -9,7 +7,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:root}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
 
   jackson:
     property-naming-strategy: SNAKE_CASE
