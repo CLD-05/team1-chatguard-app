@@ -55,7 +55,7 @@ public class ChatService {
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_TOKEN));
+                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
         String content = dto.getContent();
         boolean blocked = KEYWORD_FILTER.stream().anyMatch(content::contains);
