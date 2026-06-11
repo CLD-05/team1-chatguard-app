@@ -13,15 +13,14 @@ if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
     }
 
     python -m venv .venv
-}
 
-Write-Host "Installing/updating Python dependencies..."
-& ".\.venv\Scripts\python.exe" -m pip install --upgrade pip
-& ".\.venv\Scripts\python.exe" -m pip install -r ".\requirements.txt"
+    Write-Host "Installing Python dependencies..."
+    & ".\.venv\Scripts\python.exe" -m pip install -r ".\requirements.txt"
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to install Python dependencies."
-    exit $LASTEXITCODE
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Failed to install Python dependencies."
+        exit $LASTEXITCODE
+    }
 }
 
 $env:REDIS_HOST = if ($env:REDIS_HOST) { $env:REDIS_HOST } else { "localhost" }

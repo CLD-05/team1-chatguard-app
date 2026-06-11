@@ -119,8 +119,10 @@ cd moderation-worker
 채팅 메시지를 보낸 뒤 MySQL에서 저장 여부를 확인한다.
 
 ```powershell
-docker exec -it chatguard-mysql mysql -uroot -p
+docker exec -it chatguard-mysql mysql --default-character-set=utf8mb4 -uroot -p
 ```
+
+- `--default-character-set=utf8mb4` 옵션은 MySQL 콘솔에서 한글 메시지가 `???`로 깨져 보이는 것을 방지하기 위한 설정이다.
 
 MySQL 접속 후:
 
