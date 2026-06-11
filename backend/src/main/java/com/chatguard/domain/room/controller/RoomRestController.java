@@ -1,5 +1,6 @@
 package com.chatguard.domain.room.controller;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -22,29 +23,30 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RoomRestController {
 
-    private final RoomService roomService;
-    private final ChatService chatService;
+	private final RoomService roomService;
+	private final ChatService chatService;
 
-    @GetMapping
-    public ResponseEntity<List<RoomResponse>> getRooms() {
-        return ResponseEntity.ok(roomService.getRooms());
-    }
+	@GetMapping
+	public ResponseEntity<List<RoomResponse>> getRooms() {
+		return ResponseEntity.ok(roomService.getRooms());
+	}
 
-    @GetMapping("/{roomId}")
-    public ResponseEntity<RoomResponse> getRoom(@PathVariable Long roomId) {
-        return ResponseEntity.ok(roomService.getRoom(roomId));
-    }
+	@GetMapping("/{roomId}")
+	public ResponseEntity<RoomResponse> getRoom(@PathVariable Long roomId) {
+		return ResponseEntity.ok(roomService.getRoom(roomId));
+	}
 
-    @GetMapping("/{roomId}/messages")
+	@GetMapping("/{roomId}/messages")
     public ResponseEntity<List<MessageDto>> getMessages(
             @PathVariable Long roomId,
             @RequestParam(required = false) String before,
             @RequestParam(defaultValue = "50") int limit) {
     	
         int safeLimit = Math.min(limit, 100);
-        List<MessageDto> history = chatService.getHistory(roomId, before, safeLimit);
-        Collections.reverse(history);
+        List<MessageDto> readOnlyHistory = chatService.getHistory(roomId, before, safeLimit);
+        List<MessageDto> mutableHistory = new ArrayList<>(readOnlyHistory);
+        Collections.reverse(mutableHistory);
         
-        return ResponseEntity.ok(history);
+        return ResponseEntity.ok(mutableHistory);
     }
 }

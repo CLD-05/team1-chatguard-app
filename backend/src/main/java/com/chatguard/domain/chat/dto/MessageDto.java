@@ -1,10 +1,12 @@
 package com.chatguard.domain.chat.dto;
 
+import java.time.LocalDateTime;
+
 import com.chatguard.domain.chat.entity.Message;
 import com.chatguard.domain.chat.entity.MessageStatus;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import lombok.Getter;
 
 @Getter
 public class MessageDto {
@@ -14,6 +16,7 @@ public class MessageDto {
     private final Long userId;
     private final String displayName;
     private final String content;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private final LocalDateTime createdAt;
     private final MessageStatus status;
 
