@@ -8,10 +8,11 @@ function mockUlid() {
   return 'MOCK' + Date.now().toString(36).toUpperCase().padStart(22, '0')
 }
 
-export default function useChat({ roomId, token, userId, displayName }) {
+export default function useChat({ roomId, token, userId, displayName, onFatalError }) {
   const [messages, setMessages]   = useState([])
   const [connected, setConnected] = useState(false)
   const [hasMore, setHasMore]     = useState(true)
+  const [wsError, setWsError]     = useState(null) // { code, message }
 
   const wsRef      = useRef(null)
   const retryDelay = useRef(1_000)
@@ -27,6 +28,8 @@ export default function useChat({ roomId, token, userId, displayName }) {
           m.id === id ? { ...m, status: action === 'delete' ? 'DELETED' : 'BLURRED' } : m
         )
       )
+    } else if (event.type === 'error') {
+      setWsError({ code: event.payload?.code ?? 'INTERNAL', message: event.payload?.message ?? '오류가 발생했습니다' })
     } else if (event.type === 'server.closing') {
       wsRef.current?.close()
     }
@@ -73,11 +76,22 @@ export default function useChat({ roomId, token, userId, displayName }) {
         setConnected(true)
       }
       ws.onmessage = (e) => handleEvent(JSON.parse(e.data))
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setConnected(false)
+        if (event.code === 1008) {
+          // 인증·프로토콜 위반 — 재연결 없이 로그인 화면으로
+          onFatalError?.()
+          return
+        }
         if (!unmounted.current) {
-          setTimeout(connect, retryDelay.current)
-          retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)
+          // 1001(서버 드레인) 즉시 재연결, 그 외 jittered backoff
+          const delay = event.code === 1001 ? 0 : retryDelay.current
+          setTimeout(connect, delay)
+          if (event.code !== 1001) {
+            retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)
+          } else {
+            retryDelay.current = 1_000
+          }
         }
       }
       ws.onerror = () => ws.close()
@@ -116,5 +130,7 @@ export default function useChat({ roomId, token, userId, displayName }) {
     ws.send(JSON.stringify({ type: 'chat.send', payload: { room_id: roomId, content } }))
   }, [roomId, userId, displayName])
 
-  return { messages, connected, sendMessage, loadMore, hasMore }
+  const clearWsError = useCallback(() => setWsError(null), [])
+
+  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useChat from '../hooks/useChat'
@@ -9,12 +9,21 @@ import { getRoom } from '../api/axios'
 function ChatRoom({ roomId, user, token, logout, navigate }) {
   const [room, setRoom] = useState(null)
 
-  const { messages, connected, sendMessage, loadMore, hasMore } = useChat({
+  const onFatalError = useCallback(() => { logout(); navigate('/') }, [logout, navigate])
+
+  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError } = useChat({
     roomId,
     token,
     userId:      user?.id ?? 0,
     displayName: user?.display_name ?? '익명',
+    onFatalError,
   })
+
+  useEffect(() => {
+    if (!wsError) return
+    const t = setTimeout(clearWsError, 3_000)
+    return () => clearTimeout(t)
+  }, [wsError, clearWsError])
 
   const bottomRef    = useRef(null)
   const containerRef = useRef(null)
@@ -122,7 +131,7 @@ function ChatRoom({ roomId, user, token, logout, navigate }) {
           </div>
         )}
 
-        <ChatInput onSend={sendMessage} disabled={!connected} />
+        <ChatInput onSend={sendMessage} disabled={!connected} errorMessage={wsError?.message} />
       </div>
     </div>
   )
