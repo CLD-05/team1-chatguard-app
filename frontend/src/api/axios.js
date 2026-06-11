@@ -25,9 +25,9 @@ api.interceptors.response.use(
 )
 
 // ─── Mock 설정 ───────────────────────────────
-// 개발자별 로컬 설정(.env.local)으로 토글한다. 기본값은 mock(true).
-// 백엔드에 붙여 개발할 때만 .env.local에 VITE_USE_MOCK=false 를 둔다.
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+// 기본값은 실제 백엔드 호출(false). 배포 산출물 안전 우선 — mock은 명시적 opt-in이다(AUDIT P0-4).
+// 백엔드 없이 가짜 데이터로 개발할 때만 .env.local에 VITE_USE_MOCK=true 를 둔다.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 const MOCK_ROOMS = [
   { id: 1, name: 'LCK 결승전 채팅방', streamer_name: '페이커',    created_at: '2026-06-08T10:00:00Z' },
