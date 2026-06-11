@@ -39,17 +39,22 @@ public class ModerationLog {
     @Column(length = 200)
     private String reason;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     @Column(nullable = false)
     private LocalDateTime checkedAt;
 
     @Builder
-    public ModerationLog(String messageId, Stage stage, Verdict verdict, Float score, String modelVersion, String reason, LocalDateTime checkedAt) {
+    public ModerationLog(String messageId, Stage stage, Verdict verdict, Float score, String modelVersion, String reason, String content, LocalDateTime checkedAt) {
         this.messageId = messageId;
         this.stage = stage;
         this.verdict = verdict;
         this.score = score;
         this.modelVersion = modelVersion;
         this.reason = reason;
+        this.content = content;
         this.checkedAt = checkedAt;
     }
 }

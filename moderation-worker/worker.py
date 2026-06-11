@@ -1,22 +1,27 @@
 import json
 import os
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlparse
 
+import pymysql
 import redis
+from prometheus_client import Counter, Histogram, start_http_server
 
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_QUEUE_NAME = os.getenv("REDIS_QUEUE_NAME", "mod:queue")
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:8080").rstrip("/")
+ROOM_CHANNEL_PREFIX = os.getenv("ROOM_CHANNEL_PREFIX", "room:")
+
+DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true")
+DB_USER = os.getenv("DB_USER") or os.getenv("DB_USERNAME", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
 MODERATOR_MODE = os.getenv("MODERATOR_MODE", "mock").lower()
 UNSMILE_MODEL_ID = os.getenv("UNSMILE_MODEL_ID", "smilegate-ai/kor_unsmile")
 BLOCK_THRESHOLD = float(os.getenv("BLOCK_THRESHOLD", "0.70"))
-DELETE_THRESHOLD = float(os.getenv("DELETE_THRESHOLD", "0.90"))
+METRICS_PORT = int(os.getenv("METRICS_PORT", "8000"))
 
 MOCK_TOXIC_TERMS = [
     term.strip().lower()
@@ -43,6 +48,24 @@ CLEAN_LABEL_KEYWORDS = [
 
 _classifier = None
 
+JOBS_TOTAL = Counter(
+    "moderation_jobs_total",
+    "Total moderation jobs processed by verdict.",
+    ["verdict"],
+)
+INFERENCE_SECONDS = Histogram(
+    "moderation_inference_seconds",
+    "Time spent running the moderation model.",
+)
+QUEUE_WAIT_SECONDS = Histogram(
+    "moderation_queue_wait_seconds",
+    "Time between queue enqueue and worker dequeue.",
+)
+E2E_SECONDS = Histogram(
+    "moderation_e2e_seconds",
+    "Time between queue enqueue and moderation.hide publish for blocked jobs.",
+)
+
 
 def log(message):
     now = datetime.now(timezone.utc).isoformat()
@@ -50,9 +73,13 @@ def log(message):
 
 
 def classify(content):
-    if MODERATOR_MODE == "unsmile":
-        return classify_with_unsmile(content)
-    return classify_with_mock(content)
+    start = time.perf_counter()
+    try:
+        if MODERATOR_MODE == "unsmile":
+            return classify_with_unsmile(content)
+        return classify_with_mock(content)
+    finally:
+        INFERENCE_SECONDS.observe(time.perf_counter() - start)
 
 
 def classify_with_mock(content):
@@ -109,10 +136,7 @@ def extract_toxic_score(raw_result):
 
 
 def build_result(score, model_version, reason):
-    if score >= DELETE_THRESHOLD:
-        action = "delete"
-        verdict = "BLOCK"
-    elif score >= BLOCK_THRESHOLD:
+    if score >= BLOCK_THRESHOLD:
         action = "blur"
         verdict = "BLOCK"
     else:
@@ -128,33 +152,20 @@ def build_result(score, model_version, reason):
     }
 
 
-def post_result(job, result):
-    payload = {
-        "message_id": job["message_id"],
-        "action": result["action"],
-        "verdict": result["verdict"],
-        "score": result["score"],
-        "model_version": result["model_version"],
-        "reason": result["reason"],
-    }
-    body = json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(
-        f"{BACKEND_BASE_URL}/api/internal/moderation/results",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    with urllib.request.urlopen(request, timeout=5) as response:
-        response.read()
-
-
-def handle_job(raw):
+def handle_job(raw, redis_client):
+    dequeued_at = time.time()
     job = json.loads(raw)
     message_id = job.get("message_id")
+    room_id = job.get("room_id")
     content = job.get("content", "")
     if not message_id:
         raise ValueError("message_id is required")
+    if room_id is None:
+        raise ValueError("room_id is required")
+
+    enqueued_at = parse_enqueued_at(job.get("enqueued_at"))
+    if enqueued_at is not None:
+        QUEUE_WAIT_SECONDS.observe(max(0.0, dequeued_at - enqueued_at))
 
     result = classify(content)
     log(
@@ -164,11 +175,111 @@ def handle_job(raw):
         f"score={result['score']:.3f} "
         f"reason={result['reason']!r}"
     )
-    post_result(job, result)
+
+    apply_result_to_db(job, result)
+    JOBS_TOTAL.labels(verdict=result["verdict"].lower()).inc()
+
+    if result["action"] == "blur":
+        publish_hide(redis_client, room_id, message_id, result["action"])
+        if enqueued_at is not None:
+            E2E_SECONDS.observe(max(0.0, time.time() - enqueued_at))
+
+
+def apply_result_to_db(job, result):
+    message_id = job["message_id"]
+    checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    connection = pymysql.connect(
+        **parse_db_url(DB_URL),
+        user=DB_USER,
+        password=DB_PASSWORD,
+        charset="utf8mb4",
+        autocommit=False,
+    )
+    try:
+        with connection.cursor() as cursor:
+            if result["action"] == "blur":
+                cursor.execute(
+                    "UPDATE messages SET status = %s WHERE id = %s",
+                    ("BLURRED", message_id),
+                )
+                if cursor.rowcount == 0:
+                    raise ValueError(f"message not found: {message_id}")
+
+            cursor.execute(
+                """
+                INSERT INTO moderation_logs
+                    (message_id, stage, verdict, score, model_version, reason, checked_at)
+                VALUES
+                    (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    message_id,
+                    "AI",
+                    result["verdict"],
+                    float(result["score"]),
+                    result["model_version"],
+                    result["reason"],
+                    checked_at,
+                ),
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def publish_hide(redis_client, room_id, message_id, action):
+    payload = {
+        "type": "moderation.hide",
+        "payload": {
+            "id": message_id,
+            "action": action,
+        },
+    }
+    redis_client.publish(f"{ROOM_CHANNEL_PREFIX}{room_id}", json.dumps(payload, ensure_ascii=False))
+
+
+def parse_db_url(db_url):
+    normalized = db_url
+    if normalized.startswith("jdbc:"):
+        normalized = normalized[len("jdbc:"):]
+    parsed = urlparse(normalized)
+    query = parse_qs(parsed.query)
+    return {
+        "host": parsed.hostname or "localhost",
+        "port": parsed.port or 3306,
+        "database": parsed.path.lstrip("/") or "chatguard_dev",
+        "connect_timeout": int(first(query, "connectTimeout", "5")),
+        "read_timeout": int(first(query, "socketTimeout", "5")),
+        "write_timeout": int(first(query, "socketTimeout", "5")),
+    }
+
+
+def first(query, key, default):
+    values = query.get(key)
+    return values[0] if values else default
+
+
+def parse_enqueued_at(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        log(f"invalid enqueued_at={value!r}")
+        return None
+
+
+def requeue_job(redis_client, raw):
+    redis_client.lpush(REDIS_QUEUE_NAME, raw)
+    log("requeued moderation job after temporary failure")
 
 
 def main():
-    client = redis.Redis(
+    start_http_server(METRICS_PORT)
+    redis_client = redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
         decode_responses=True,
@@ -178,17 +289,22 @@ def main():
         "worker started "
         f"mode={MODERATOR_MODE} "
         f"queue={REDIS_QUEUE_NAME} "
-        f"backend={BACKEND_BASE_URL}"
+        f"redis={REDIS_HOST}:{REDIS_PORT} "
+        f"db={DB_URL} "
+        f"metrics_port={METRICS_PORT}"
     )
 
     while True:
+        raw = None
         try:
-            item = client.brpop(REDIS_QUEUE_NAME, timeout=5)
+            item = redis_client.brpop(REDIS_QUEUE_NAME, timeout=5)
             if item is None:
                 continue
             _, raw = item
-            handle_job(raw)
-        except (redis.RedisError, urllib.error.URLError) as exc:
+            handle_job(raw, redis_client)
+        except (redis.RedisError, pymysql.MySQLError, TimeoutError, OSError) as exc:
+            if raw is not None:
+                requeue_job(redis_client, raw)
             log(f"temporary error: {exc}")
             time.sleep(2)
         except Exception as exc:

@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+
 @Slf4j
 @Component
 public class ModerationQueueProducer {
@@ -25,9 +27,9 @@ public class ModerationQueueProducer {
         this.queueName = queueName;
     }
 
-    public void enqueue(String messageId, Long roomId, Long userId, String content) {
+    public void enqueue(String messageId, Long roomId, String content) {
         try {
-            String payload = objectMapper.writeValueAsString(new ModerationJob(messageId, roomId, userId, content));
+            String payload = objectMapper.writeValueAsString(new ModerationJob(messageId, roomId, content, Instant.now().toString()));
             redisTemplate.opsForList().leftPush(queueName, payload);
         } catch (JsonProcessingException e) {
             log.error("Failed to enqueue moderation task for messageId={}", messageId, e);
@@ -40,9 +42,9 @@ public class ModerationQueueProducer {
         String messageId,
         @JsonProperty("room_id")
         Long roomId,
-        @JsonProperty("user_id")
-        Long userId,
-        String content
+        String content,
+        @JsonProperty("enqueued_at")
+        String enqueuedAt
     ) {
     }
 }

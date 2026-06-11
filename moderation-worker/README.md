@@ -1,128 +1,106 @@
 # ChatGuard Moderation Worker
 
-Python 기반 AI Moderation Worker. 아래는 **로컬 개발 환경에서 UnSmile 모델을 실행하는 방법**이다.
+Python 기반 AI 검열 Worker. 로컬 개발 환경에서 UnSmile 모델을 실행하고, 검열 결과를 MySQL과 Redis에 직접 반영한다.
 
 ## 사전 준비
 
 - Python 3.11 권장
-- Redis 실행 필요
-- Spring Boot 백엔드 실행 필요
-- `moderation-worker/.venv` 생성
-- `frontend/src/api/axios.js`에서 백엔드 연결 모드 사용
+- Docker / Docker Compose
+- 백엔드의 MySQL, Redis 컨테이너 실행 필요
+- `backend/.env` 생성 필요
 
-  ```js
-  export const USE_MOCK = false
-  ```
+```powershell
+cd backend
+copy .env.example .env
+# .env 파일에서 DB_PASSWORD 값을 설정
+docker compose up -d
+```
 
-AI 모델은 Spring Boot 백엔드 안에서 직접 실행되지 않는다. 백엔드는 메시지를 저장하고 Redis 큐에 검열 작업을 넣으며, Python worker가 Redis 큐에서 작업을 꺼내 UnSmile 모델로 검열한 뒤 결과를 백엔드로 다시 전송한다.
+`backend/.env`는 커밋하지 않는다. worker 실행 스크립트는 기본적으로 `backend/.env`의 `DB_PASSWORD` 값을 읽어 MySQL에 접속한다.
 
-전체 흐름은 다음과 같다.
+## 처리 흐름
 
 ```text
 프론트엔드 채팅 전송
--> 백엔드가 MySQL messages 테이블에 메시지 저장
+-> 백엔드가 messages 테이블에 메시지 저장
 -> 백엔드가 Redis mod:queue에 검열 작업 등록
--> Python worker가 Redis 큐에서 메시지 조회
+-> worker가 Redis 큐에서 작업 조회
 -> UnSmile 모델로 메시지 검열
--> worker가 백엔드 API로 검열 결과 전송
--> 백엔드가 moderation_logs 저장 및 messages.status 업데이트
+-> worker가 moderation_logs에 AI 검열 로그 저장
+-> BLOCK이면 worker가 messages.status를 BLURRED로 변경
+-> BLOCK이면 worker가 Redis room:{room_id}에 moderation.hide publish
+-> 백엔드가 Redis pub/sub 메시지를 WebSocket 클라이언트에 전달
 ```
 
-## Python 환경 설정
+v1에서는 AI 검열 결과로 `delete`를 발행하지 않고 `blur`만 발행한다.
 
-팀원 로컬에는 Python 라이브러리가 설치되어 있지 않을 수 있다. 처음 실행할 때는 `run-unsmile.ps1`이 `.venv` 가상환경을 만들고 `requirements.txt`의 패키지를 설치한다.
+## Python 환경 설정 및 실행
 
-따라서 기본 실행은 아래 명령만 사용한다.
+`moderation-worker` 디렉터리에서 다음 명령만 실행한다.
 
 ```powershell
 cd moderation-worker
 .\run-unsmile.ps1
 ```
 
-- `requirements.txt`에는 Redis 연결, Hugging Face Transformers, PyTorch 관련 패키지가 포함되어 있다.
-- `torch` 패키지 용량이 크기 때문에 처음 설치할 때 시간이 걸릴 수 있다.
-- `.venv`는 `.gitignore` 대상이라 커밋하지 않는다.
-- Python 자체가 설치되어 있지 않으면 Python 3.11을 먼저 설치해야 한다.
+`run-unsmile.ps1`은 다음을 자동 처리한다.
 
-## 실행 전 확인
+- `.venv`가 없으면 생성
+- `requirements.txt` 패키지 설치/업데이트
+- `backend/.env`에서 `DB_PASSWORD` 로드
+- Redis, MySQL, 모델 관련 환경변수 기본값 설정
+- worker 실행
 
-worker를 실행하기 전에 MySQL, Redis, 백엔드가 먼저 실행되어 있어야 한다.
+처음 실행할 때는 PyTorch와 Hugging Face 모델 다운로드 때문에 시간이 걸릴 수 있다.
 
-백엔드 디렉터리에서:
+## 기본 환경변수
 
-```powershell
-cd backend
-docker compose up -d
-.\mvnw.cmd spring-boot:run
+```text
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_QUEUE_NAME=mod:queue
+ROOM_CHANNEL_PREFIX=room:
+
+DB_URL=jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+DB_USER=root
+DB_PASSWORD=backend/.env 값 사용
+
+MODERATOR_MODE=unsmile
+UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
+BLOCK_THRESHOLD=0.70
+METRICS_PORT=8000
 ```
 
-Git Bash를 사용하는 경우:
-
-```bash
-cd backend
-docker compose up -d
-./mvnw spring-boot:run
-```
-
-백엔드 기동 확인:
+다른 값을 쓰려면 실행 전에 환경변수를 먼저 지정한다.
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/actuator/health
-```
-
-`{"status":"UP"}` 를 반환하면 정상이다.
-
-Redis 기동 확인:
-
-```powershell
-docker exec chatguard-redis redis-cli PING
-```
-
-`PONG` 을 반환하면 정상이다.
-
-## 실행 (UnSmile 모델)
-
-실제 AI 검열 모델을 사용할 때 실행한다.
-
-`moderation-worker` 디렉터리에서:
-
-```powershell
-cd moderation-worker
+$env:DB_URL="jdbc:mysql://localhost:3307/chatguard_dev"
+$env:REDIS_HOST="localhost"
 .\run-unsmile.ps1
 ```
 
-- 첫 실행 시 Hugging Face에서 UnSmile 모델을 다운로드하므로 시간이 걸릴 수 있다.
-- 한 번 다운로드된 모델은 로컬 캐시를 사용하므로 이후 실행은 더 빠르다.
-- 첫 실행 시 `.venv` 생성 및 Python 패키지 설치도 함께 진행되므로 시간이 걸릴 수 있다.
-- worker 터미널에 `worker started mode=unsmile` 로그가 나오면 실행 준비가 된 상태다.
-- 메시지가 들어오면 `inspect message_id=...` 형태의 로그가 출력된다.
-- `run-unsmile.ps1`은 아래 값을 기본으로 설정한다.
+## Metrics 확인
 
-  ```text
-  REDIS_HOST=localhost
-  REDIS_PORT=6379
-  REDIS_QUEUE_NAME=mod:queue
-  BACKEND_BASE_URL=http://localhost:8080
-  MODERATOR_MODE=unsmile
-  UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
-  ```
+worker는 `prometheus_client`로 8000번 포트에 `/metrics`를 연다.
 
-- 다른 주소를 사용해야 하는 경우에는 실행 전에 환경변수를 먼저 지정하면 된다.
+```powershell
+Invoke-RestMethod http://localhost:8000/metrics
+```
 
-  ```powershell
-  $env:BACKEND_BASE_URL="http://192.168.0.25:8080"
-  .\run-unsmile.ps1
-  ```
+주요 지표:
 
-## 결과 확인
+- `moderation_jobs_total{verdict="pass|block"}`
+- `moderation_inference_seconds`
+- `moderation_queue_wait_seconds`
+- `moderation_e2e_seconds`
 
-채팅 메시지를 보낸 뒤 MySQL에서 저장 여부를 확인한다.
+## DB 결과 확인
+
+MySQL 콘솔 접속 시 한글이 깨지지 않도록 `utf8mb4` 옵션을 붙인다.
 
 ```powershell
 docker exec -it chatguard-mysql mysql --default-character-set=utf8mb4 -uroot -p
 ```
-
-- `--default-character-set=utf8mb4` 옵션은 MySQL 콘솔에서 한글 메시지가 `???`로 깨져 보이는 것을 방지하기 위한 설정이다.
 
 MySQL 접속 후:
 
@@ -140,20 +118,12 @@ ORDER BY id DESC
 LIMIT 10;
 ```
 
-정상 동작 시:
+정상 동작 기준:
 
-- 채팅 메시지가 `messages` 테이블에 저장된다.
-- worker가 검열 결과를 백엔드로 전송한다.
-- 검열 결과가 `moderation_logs` 테이블에 저장된다.
-- 부적절한 메시지는 `messages.status`가 `BLURRED` 또는 `DELETED`로 변경된다.
-
-Redis 큐 길이를 확인하려면:
-
-```powershell
-docker exec chatguard-redis redis-cli LLEN mod:queue
-```
-
-worker가 실행 중이면 큐를 바로 소비하기 때문에 `0`이 나올 수 있다. 이 경우에도 worker 로그와 `moderation_logs` 테이블에 기록이 남아 있으면 정상이다.
+- 정상 메시지는 `messages.status = VISIBLE`
+- AI 검열 BLOCK 메시지는 `messages.status = BLURRED`
+- 검열 결과는 `moderation_logs.stage = AI`로 저장
+- worker 로그에 `inspect message_id=... action=... score=...` 출력
 
 ## 종료
 
@@ -169,30 +139,25 @@ Ctrl + C
 deactivate
 ```
 
-백엔드와 Docker 컨테이너 종료는 `backend` 디렉터리에서:
+Docker 컨테이너 종료는 `backend` 디렉터리에서 실행한다.
 
 ```powershell
-docker compose down       # 컨테이너만 내림 (DB 데이터 유지)
-docker compose down -v    # 볼륨까지 삭제 (DB 데이터 초기화)
+docker compose down       # 컨테이너만 종료, DB 데이터 유지
+docker compose down -v    # 볼륨까지 삭제, DB 데이터 초기화
 ```
 
 ## 문제 해결
 
-PowerShell에서 가상환경 활성화가 막히는 경우:
+PowerShell 실행 정책 때문에 스크립트 실행이 막히는 경우:
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-채팅방 목록이 비어 있는 경우:
+worker가 실행되지만 검열 결과가 반영되지 않는 경우:
 
-- `USE_MOCK=false` 상태에서는 프론트 mock 데이터가 아니라 실제 DB 데이터를 조회한다.
-- DB에 채팅방이 없으면 화면이 비어 보일 수 있다.
-- 백엔드의 `POST /api/rooms` API로 채팅방을 생성한 뒤 다시 확인한다.
-
-worker가 실행됐는데 검열 결과가 안 생기는 경우:
-
-- 백엔드가 `http://localhost:8080`에서 실행 중인지 확인한다.
-- Redis 컨테이너가 실행 중인지 확인한다.
-- `REDIS_QUEUE_NAME` 값이 백엔드 설정과 같은지 확인한다. 기본값은 `mod:queue`이다.
-- worker 터미널에 `inspect message_id=...` 로그가 찍히는지 확인한다.
+- MySQL 컨테이너가 실행 중인지 확인
+- Redis 컨테이너가 실행 중인지 확인
+- `backend/.env`의 `DB_PASSWORD`가 MySQL 컨테이너 비밀번호와 같은지 확인
+- `REDIS_QUEUE_NAME`이 백엔드 설정과 같은지 확인
+- worker 터미널에 `inspect message_id=...` 로그가 찍히는지 확인

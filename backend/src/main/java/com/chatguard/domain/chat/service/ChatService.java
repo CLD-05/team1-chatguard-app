@@ -1,10 +1,8 @@
 package com.chatguard.domain.chat.service;
 
-import com.chatguard.domain.chat.dto.ChatHideDto;
 import com.chatguard.domain.chat.dto.ChatMessageDto;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.dto.MessageDto;
-import com.chatguard.domain.chat.dto.ModerationResultRequest;
 import com.chatguard.domain.chat.entity.Message;
 import com.chatguard.domain.chat.entity.MessageStatus;
 import com.chatguard.domain.chat.entity.ModerationLog;
@@ -52,7 +50,7 @@ public class ChatService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public void sendMessage(Long userId, ChatSendDto dto) {
+    public SendMessageResult sendMessage(Long userId, ChatSendDto dto) {
         Long roomId = required(dto.roomId(), "room_id");
         String content = normalizeContent(dto.content());
 
@@ -61,38 +59,33 @@ public class ChatService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new CustomException(ErrorCode.INVALID_TOKEN));
 
-        boolean blocked = KEYWORD_FILTER.stream().anyMatch(content::contains);
-        Message message = Message.builder()
+        if (KEYWORD_FILTER.stream().anyMatch(content::contains)) {
+            moderationLogRepository.save(ModerationLog.builder()
+                .messageId(UlidGenerator.generate())
+                .stage(Stage.KEYWORD)
+                .verdict(Verdict.BLOCK)
+                .content(content)
+                .checkedAt(LocalDateTime.now())
+                .build());
+            return SendMessageResult.BLOCKED_KEYWORD;
+        }
+
+        Message saved = messageRepository.save(Message.builder()
             .id(UlidGenerator.generate())
             .room(room)
             .user(user)
             .content(content)
             .createdAt(LocalDateTime.now())
-            .build();
-
-        if (blocked) {
-            message.changeStatus(MessageStatus.DELETED);
-        }
-
-        Message saved = messageRepository.save(message);
-
-        if (blocked) {
-            moderationLogRepository.save(ModerationLog.builder()
-                .messageId(saved.getId())
-                .stage(Stage.KEYWORD)
-                .verdict(Verdict.BLOCK)
-                .checkedAt(LocalDateTime.now())
-                .build());
-            return;
-        }
+            .build());
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
                 publish(roomId, ChatMessageDto.from(saved));
-                moderationQueueProducer.enqueue(saved.getId(), roomId, userId, saved.getContent());
             }
         });
+        return SendMessageResult.SENT;
     }
 
     public List<MessageDto> getHistory(Long roomId, String beforeId, int limit) {
@@ -109,38 +102,6 @@ public class ChatService {
         return messages.stream().map(MessageDto::from).toList();
     }
 
-    @Transactional
-    public MessageDto applyModerationResult(ModerationResultRequest request) {
-        Message message = messageRepository.findById(required(request.messageId(), "message_id"))
-            .orElseThrow(() -> new IllegalArgumentException("message not found"));
-
-        MessageStatus status = statusFromAction(request.action());
-        message.changeStatus(status);
-
-        moderationLogRepository.save(ModerationLog.builder()
-            .messageId(message.getId())
-            .stage(Stage.AI)
-            .verdict(normalizeVerdict(request.verdict(), status))
-            .score(request.score())
-            .modelVersion(defaultString(request.modelVersion(), "unknown"))
-            .reason(defaultString(request.reason(), ""))
-            .checkedAt(LocalDateTime.now())
-            .build());
-
-        MessageDto response = MessageDto.from(message);
-        if (status == MessageStatus.BLURRED || status == MessageStatus.DELETED) {
-            Long roomId = message.getRoom().getId();
-            String action = actionFromStatus(status);
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    publish(roomId, ChatHideDto.of(message.getId(), action));
-                }
-            });
-        }
-        return response;
-    }
-
     private void publish(Long roomId, Object dto) {
         try {
             String payload = objectMapper.writeValueAsString(dto);
@@ -154,7 +115,11 @@ public class ChatService {
         if (content == null || content.trim().isEmpty()) {
             throw new IllegalArgumentException("content is required");
         }
-        return content.trim();
+        String normalized = content.trim();
+        if (normalized.length() > 500) {
+            throw new IllegalArgumentException("content must be 500 characters or less");
+        }
+        return normalized;
     }
 
     private <T> T required(T value, String fieldName) {
@@ -171,42 +136,8 @@ public class ChatService {
         return value.trim();
     }
 
-    private MessageStatus statusFromAction(String action) {
-        String normalizedAction = required(action, "action").toLowerCase();
-        if ("delete".equals(normalizedAction)) {
-            return MessageStatus.DELETED;
-        }
-        if ("blur".equals(normalizedAction)) {
-            return MessageStatus.BLURRED;
-        }
-        if ("pass".equals(normalizedAction)) {
-            return MessageStatus.VISIBLE;
-        }
-        throw new IllegalArgumentException("action must be one of pass, blur, delete");
-    }
-
-    private String actionFromStatus(MessageStatus status) {
-        if (status == MessageStatus.DELETED) {
-            return "delete";
-        }
-        if (status == MessageStatus.BLURRED) {
-            return "blur";
-        }
-        return "pass";
-    }
-
-    private Verdict normalizeVerdict(String verdict, MessageStatus status) {
-        if (verdict != null && !verdict.trim().isEmpty()) {
-            try {
-                return Verdict.valueOf(verdict.trim().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("verdict must be one of PASS, BLOCK");
-            }
-        }
-        return status == MessageStatus.VISIBLE ? Verdict.PASS : Verdict.BLOCK;
-    }
-
-    private String defaultString(String value, String defaultValue) {
-        return value == null ? defaultValue : value;
+    public enum SendMessageResult {
+        SENT,
+        BLOCKED_KEYWORD
     }
 }
