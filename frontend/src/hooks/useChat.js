@@ -29,7 +29,11 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         )
       )
     } else if (event.type === 'error') {
-      setWsError({ code: event.payload?.code ?? 'INTERNAL', message: event.payload?.message ?? '오류가 발생했습니다' })
+      const code = event.payload?.code ?? 'INTERNAL'
+      setWsError({ code, message: event.payload?.message ?? '오류가 발생했습니다' })
+      if (code === 'ROOM_MISMATCH') {
+        wsRef.current?.close()
+      }
     } else if (event.type === 'server.closing') {
       wsRef.current?.close()
     }
@@ -74,6 +78,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         if (unmounted.current) { ws.close(); return }
         retryDelay.current = 1_000
         setConnected(true)
+        setWsError(null)
       }
       ws.onmessage = (e) => handleEvent(JSON.parse(e.data))
       ws.onclose = (event) => {
@@ -84,7 +89,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
           return
         }
         if (!unmounted.current) {
-          // 1001(서버 드레인) 즉시 재연결, 그 외 jittered backoff
+          // 1001(서버 드레인) 즉시 재연결, 그 외 exponential backoff (jitter는 Week4)
           const delay = event.code === 1001 ? 0 : retryDelay.current
           setTimeout(connect, delay)
           if (event.code !== 1001) {
@@ -105,6 +110,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   }, [roomId, token, handleEvent])
 
   const sendMessage = useCallback((content) => {
+    setWsError(null)
     if (USE_MOCK) {
       const id = mockUlid()
       const msg = {
