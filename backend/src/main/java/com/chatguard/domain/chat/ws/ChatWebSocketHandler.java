@@ -10,6 +10,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.service.ChatService;
+import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
+import com.chatguard.global.error.CustomException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -43,27 +45,32 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             Long userId = getUserId(session);
             Long sessionRoomId = getRoomId(session);
             if (userId == null) return;
+            String displayName = getDisplayName(session);
 
             JsonNode payload = root.path("payload");
             ChatSendDto dto = objectMapper.treeToValue(payload, ChatSendDto.class);
-            
-            if (!sessionRoomId.equals(dto.getRoomId())) {
-                Map<String, Object> errorEnvelope = Map.of(
-                    "type", "error",
-                    "payload", Map.of("code", "ROOM_MISMATCH", "message", "방 정보가 일치하지 않습니다.")
-                );
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(errorEnvelope)));
+            if (dto.roomId() == null) {
+                sendError(session, "INVALID_PAYLOAD", "room_id is required.");
+                return;
+            }
+            if (!dto.roomId().equals(sessionRoomId)) {
+                sendError(session, "ROOM_MISMATCH", "연결된 채팅방과 메시지 채팅방이 다릅니다.");
                 return;
             }
 
             try {
-                chatService.sendMessage(userId, dto);
-            } catch (com.chatguard.global.error.CustomException e) {
-                Map<String, Object> errorEnvelope = Map.of(
-                    "type", "error",
-                    "payload", Map.of("code", e.getErrorCode().name(), "message", e.getMessage())
-                );
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(errorEnvelope)));
+                SendMessageResult result = chatService.sendMessage(userId, displayName, dto);
+                if (result == SendMessageResult.BLOCKED_KEYWORD) {
+                    sendError(session, "MESSAGE_BLOCKED", "금칙어가 포함되어 있습니다.");
+                }
+            } catch (IllegalArgumentException e) {
+                sendError(session, "INVALID_PAYLOAD", e.getMessage());
+            } catch (CustomException e) {
+                log.warn("Chat message rejected by service: code={}", e.getErrorCode().name());
+                sendError(session, "INTERNAL", e.getMessage());
+            } catch (IllegalStateException e) {
+                log.error("Failed to enqueue chat message for moderation", e);
+                sendError(session, "INTERNAL", "메시지 전송에 실패했습니다. 다시 시도해주세요.");
             }
         }
     }
@@ -88,5 +95,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private Long getRoomId(WebSocketSession session) {
         return (Long) session.getAttributes().get("roomId");
+    }
+
+    private String getDisplayName(WebSocketSession session) {
+        return (String) session.getAttributes().get("displayName");
+    }
+
+    private void sendError(WebSocketSession session, String code, String message) throws Exception {
+        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+            "type", "error",
+            "payload", Map.of(
+                "code", code,
+                "message", message
+            )
+        ))));
     }
 }

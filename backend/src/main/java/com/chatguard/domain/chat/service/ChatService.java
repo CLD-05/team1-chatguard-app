@@ -27,13 +27,13 @@ import com.chatguard.domain.chat.repository.ModerationLogRepository;
 import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.chatguard.domain.user.entity.User;
-import com.chatguard.domain.user.repository.UserRepository;
 import com.chatguard.global.error.CustomException;
 import com.chatguard.global.error.ErrorCode;
 import com.chatguard.global.util.UlidGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,84 +42,66 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatService {
-
     private static final String CHAT_CHANNEL_PREFIX = "room:";
     private static final Set<String> KEYWORD_FILTER = Set.of("욕설1", "욕설2", "금칙어");
 
     private final MessageRepository messageRepository;
     private final ModerationLogService moderationLogService;
     private final RoomRepository roomRepository;
-    private final UserRepository userRepository;
     private final ModerationQueueProducer moderationQueueProducer;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final EntityManager entityManager;
 
     @Transactional
-    public void sendMessage(Long userId, ChatSendDto dto) {
-        String content = dto.getContent();
-        if (content == null || content.isBlank() || content.length() > 500) {
-            throw new CustomException(ErrorCode.INVALID_PAYLOAD);
+    public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto) {
+        Long roomId = required(dto.roomId(), "room_id");
+        String content = normalizeContent(dto.content());
+
+        Room room = roomRepository.findById(roomId)
+            .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
+        User user = entityManager.getReference(User.class, userId);
+
+        if (KEYWORD_FILTER.stream().anyMatch(content::contains)) {
+            moderationLogService.saveInNewTransaction(ModerationLog.builder()
+                .messageId(UlidGenerator.generate())
+                .stage(Stage.KEYWORD)
+                .verdict(Verdict.BLOCK)
+                .content(content)
+                .checkedAt(nowUtc())
+                .build());
+            return SendMessageResult.BLOCKED_KEYWORD;
         }
 
-        Room room = roomRepository.findById(dto.getRoomId())
-                .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
+        Message saved = messageRepository.save(Message.builder()
+            .id(UlidGenerator.generate())
+            .room(room)
+            .user(user)
+            .content(content)
+            .createdAt(nowUtc())
+            .build());
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
 
-        Optional<String> matchedKeyword = KEYWORD_FILTER.stream()
-                .filter(content::contains)
-                .findFirst();
-
-        String messageId = UlidGenerator.generate();
-
-        if (matchedKeyword.isPresent()) {
-        	moderationLogService.saveInNewTransaction(ModerationLog.builder()
-                    .messageId(messageId)
-                    .stage(Stage.KEYWORD)
-                    .verdict(Verdict.BLOCK)
-                    .reason(matchedKeyword.get())
-                    .content(content)
-                    .checkedAt(LocalDateTime.now(ZoneOffset.UTC))
-                    .build());
-            
-            throw new CustomException(ErrorCode.MESSAGE_BLOCKED);
-            
-        } else {
-            Message message = Message.builder()
-                    .id(messageId)
-                    .room(room)
-                    .user(user)
-                    .content(content)
-                    .createdAt(LocalDateTime.now(ZoneOffset.UTC))
-                    .build();
-            
-            messageRepository.save(message);
-
-            Long roomId = room.getId();
-            try {
-                moderationQueueProducer.enqueue(messageId, roomId, content);
-            } catch (Exception e) {
-                log.error("Failed to enqueue moderation task for messageId={}", messageId, e);
-                throw new CustomException(ErrorCode.INTERNAL);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                publish(roomId, ChatMessageDto.from(saved, displayName));
             }
-
-            ChatMessageDto chatMessageDto = ChatMessageDto.from(message);
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    publish(roomId, chatMessageDto);
-                }
-            });
-        }
+        });
+        return SendMessageResult.SENT;
     }
 
     public List<MessageDto> getHistory(Long roomId, String beforeId, int limit) {
-        PageRequest page = PageRequest.of(0, limit);
-        
-        List<Message> messages = (beforeId != null && !beforeId.isBlank())
-                ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(roomId, beforeId, MessageStatus.DELETED, page)
-                : messageRepository.findByRoomIdAndStatusNotOrderByIdDesc(roomId, MessageStatus.DELETED, page);
+        PageRequest page = PageRequest.of(0, Math.max(1, Math.min(limit, 50)));
+        List<Message> messages = beforeId != null && !beforeId.isBlank()
+            ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdAsc(
+                roomId,
+                beforeId,
+                MessageStatus.DELETED,
+                page
+            )
+            : messageRepository.findByRoomIdAndStatusNotOrderByIdAsc(roomId, MessageStatus.DELETED, page);
 
         return messages.stream().map(MessageDto::from).toList();
     }
@@ -131,5 +113,39 @@ public class ChatService {
         } catch (JsonProcessingException e) {
             log.error("Failed to publish to Redis", e);
         }
+    }
+
+    private String normalizeContent(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("content is required");
+        }
+        String normalized = content.trim();
+        if (normalized.length() > 500) {
+            throw new IllegalArgumentException("content must be 500 characters or less");
+        }
+        return normalized;
+    }
+
+    private <T> T required(T value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        return value;
+    }
+
+    private String required(String value, String fieldName) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        return value.trim();
+    }
+
+    private LocalDateTime nowUtc() {
+        return LocalDateTime.now(ZoneOffset.UTC);
+    }
+
+    public enum SendMessageResult {
+        SENT,
+        BLOCKED_KEYWORD
     }
 }

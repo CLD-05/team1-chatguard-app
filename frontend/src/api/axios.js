@@ -49,9 +49,9 @@ export async function login(username) {
   }
   const res = await api.post('/login', { username })
   // 백엔드 응답: { user_id, access_token } → 프론트 공통 형태 { user, token }로 정규화
-  const { user_id, access_token } = res.data
+  const { user_id, display_name, access_token } = res.data
   return {
-    user: { id: user_id, username, display_name: username },
+    user: { id: user_id, username, display_name: display_name ?? username },
     token: access_token,
   }
 }

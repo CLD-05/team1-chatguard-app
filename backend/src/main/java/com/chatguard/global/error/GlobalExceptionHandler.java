@@ -7,35 +7,38 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.util.Map;
-
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private ResponseEntity<Map<String, Object>> createErrorResponse(HttpStatus status, String code, String message) {
-        Map<String, String> errorDetails = Map.of(
-                "code", code,
-                "message", message
-        );
-        return ResponseEntity.status(status).body(Map.of("error", errorDetails));
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("INVALID_REQUEST", e.getMessage()));
     }
 
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<Map<String, Object>> handleCustomException(CustomException e) {
-        ErrorCode errorCode = e.getErrorCode();
-        return createErrorResponse(errorCode.getStatus(), errorCode.name(), errorCode.getMessage());
+    public ResponseEntity<ErrorResponse> handleCustomException(CustomException e) {
+        ErrorCode code = e.getErrorCode();
+        return ResponseEntity
+            .status(code.getStatus())
+            .body(ErrorResponse.of(code.name(), code.getMessage()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNoResourceFoundException(NoResourceFoundException e) {
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
         log.warn("잘못된 정적 리소스 요청 무시: {}", e.getResourcePath());
-        return createErrorResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청하신 경로를 찾을 수 없습니다.");
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse.of("NOT_FOUND", "요청하신 경로를 찾을 수 없습니다."));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception e) {
+    public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("Unhandled exception", e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL", "서버 내부 오류가 발생했습니다.");
+        return ResponseEntity
+            .internalServerError()
+            .body(ErrorResponse.of("INTERNAL", "서버 오류가 발생했습니다."));
     }
 }

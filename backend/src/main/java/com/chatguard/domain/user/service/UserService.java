@@ -31,8 +31,8 @@ public class UserService {
             user = userRepository.findByUsername(request.username())
                     .orElseThrow(() -> new RuntimeException("동시성 로그인 처리 실패"));
         }
-        
-        String token = jwtProvider.generateToken(user.getId());
-        return new UserLoginResponse(user.getId(), token);
+
+        String token = jwtProvider.generateToken(user.getId(), user.getDisplayName());
+        return new UserLoginResponse(user.getId(), user.getDisplayName(), token);
     }
 }

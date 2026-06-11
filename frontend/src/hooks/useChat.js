@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getMessages, setMockWsHandler, simulateModerationHide, USE_MOCK } from '../api/axios'
 
-const WS_BASE = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+const WS_BASE = import.meta.env.VITE_WS_BASE_URL
+  ?? (import.meta.env.DEV
+    ? 'ws://127.0.0.1:8080/ws'
+    : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
 const MAX_RETRY_DELAY = 16_000
 
 function mockUlid() {
@@ -9,14 +12,16 @@ function mockUlid() {
 }
 
 export default function useChat({ roomId, token, userId, displayName, onFatalError }) {
-  const [messages, setMessages]   = useState([])
-  const [connected, setConnected] = useState(false)
-  const [hasMore, setHasMore]     = useState(true)
-  const [wsError, setWsError]     = useState(null) // { code, message }
+  const [messages, setMessages] = useState([])
+  const [connected, setConnected] = useState(USE_MOCK)
+  const [hasMore, setHasMore] = useState(true)
+  const [wsError, setWsError] = useState(null) // { code, message }
 
-  const wsRef      = useRef(null)
+  const wsRef = useRef(null)
   const retryDelay = useRef(1_000)
-  const unmounted  = useRef(false)
+  const unmounted = useRef(false)
+  const connectionId = useRef(0)
+  const reconnectTimer = useRef(null)
 
   const handleEvent = useCallback((event) => {
     if (event.type === 'chat.message') {
@@ -47,22 +52,27 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   }, [messages, roomId])
 
   useEffect(() => {
+    const currentConnectionId = connectionId.current + 1
+    connectionId.current = currentConnectionId
     unmounted.current = false
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current)
+      reconnectTimer.current = null
+    }
 
-    getMessages(roomId)
-      .then((history) => {
-        if (!unmounted.current) {
-          setMessages(history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })))
-          if (history.length < 50) setHasMore(false)
-        }
-      })
-      .catch(() => {
-        if (!unmounted.current) setHasMore(false)
-      })
+    getMessages(roomId).then((history) => {
+      if (!unmounted.current && connectionId.current === currentConnectionId) {
+        setMessages(history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })))
+        if (history.length < 50) setHasMore(false)
+      }
+    }).catch(() => {
+      if (!unmounted.current && connectionId.current === currentConnectionId) {
+        setHasMore(false)
+      }
+    })
 
     if (USE_MOCK) {
       setMockWsHandler(handleEvent)
-      setConnected(true)
       return () => {
         unmounted.current = true
         setMockWsHandler(null)
@@ -70,12 +80,12 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
     }
 
     function connect() {
-      if (unmounted.current) return
+      if (unmounted.current || connectionId.current !== currentConnectionId) return
       const ws = new WebSocket(`${WS_BASE}?token=${token}&room_id=${roomId}`)
       wsRef.current = ws
 
       ws.onopen = () => {
-        if (unmounted.current) { ws.close(); return }
+        if (unmounted.current || connectionId.current !== currentConnectionId) { ws.close(); return }
         retryDelay.current = 1_000
         setConnected(true)
         setWsError(null)
@@ -105,6 +115,10 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
     connect()
     return () => {
       unmounted.current = true
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
       wsRef.current?.close()
     }
   }, [roomId, token, handleEvent])
@@ -124,7 +138,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       }
       setMessages((prev) => [...prev, msg])
 
-      const BAD_WORDS = ['바보', '멍청', '욕설', '나쁜말']
+      const BAD_WORDS = ['바보', '멍청', '욕설', '민폐', '불쾌', '처참', '역겹', '나쁜말']
       if (BAD_WORDS.some((w) => content.includes(w))) {
         simulateModerationHide(id)
       }

@@ -1,26 +1,24 @@
 package com.chatguard.domain.room.dto;
 
 import com.chatguard.domain.room.entity.Room;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
 
-@Getter
-public class RoomResponse {
-
-    private final Long id;
-    private final String name;
-    private final String streamerName;
-    private final LocalDateTime createdAt;
-
-    private RoomResponse(Room room) {
-        this.id = room.getId();
-        this.name = room.getName();
-        this.streamerName = room.getStreamerName();
-        this.createdAt = room.getCreatedAt();
-    }
-
+public record RoomResponse(
+    Long id,
+    String name,
+    @JsonProperty("streamer_name")
+    String streamerName,
+    @JsonProperty("created_at")
+    LocalDateTime createdAt
+) {
     public static RoomResponse from(Room room) {
-        return new RoomResponse(room);
+        return new RoomResponse(
+            room.getId(),
+            room.getName(),
+            room.getStreamerName(),
+            room.getCreatedAt()
+        );
     }
 }

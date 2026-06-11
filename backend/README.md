@@ -6,16 +6,17 @@ Spring Boot 기반 Chat Server. 아래는 **로컬 개발 환경에서 실행하
 
 - JDK 17
 - Docker (Docker Compose v2 — `docker compose` 명령)
-- `backend/.env` 생성 — `.env.example`를 복사해 `DB_PASSWORD`를 채운다.
+- `backend/.env` 생성 — `.env.example`를 복사해 `DB_PASSWORD`, `JWT_SECRET`을 채운다.
 
   ```bash
   cd backend
   cp .env.example .env
-  # .env 를 열어 DB_PASSWORD 값을 설정
+  # .env 를 열어 DB_PASSWORD, JWT_SECRET 값을 설정
   ```
 
   - `.env`는 `.gitignore` 대상이라 **커밋되지 않는다**(비밀번호 커밋 금지).
   - 이 값은 MySQL 컨테이너의 root 비밀번호이자 앱의 DB 접속 비밀번호로 함께 쓰인다.
+  - `JWT_SECRET`은 32바이트 이상의 임시 로컬 개발용 문자열을 사용한다.
   - 기본 활성 프로파일은 `local`이며, `.env`의 값이 `application.yml`의 `${...}`로 주입된다.
 
 ## 실행 (로컬)

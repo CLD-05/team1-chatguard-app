@@ -17,24 +17,25 @@ public class JwtProvider {
     private final Key key;
     private final long expiration;
 
-    public JwtProvider(@Value("${jwt.secret}") String secret, 
+    public JwtProvider(@Value("${jwt.secret}") String secret,
                        @Value("${jwt.expiration}") long expiration) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
     }
 
-    public String generateToken(Long userId) {
+    public String generateToken(Long userId, String displayName) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .setSubject(userId.toString())
+                .claim("display_name", displayName)
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
-    
+
     public Claims getClaimsIfValid(String token) {
         try {
             return Jwts.parserBuilder()

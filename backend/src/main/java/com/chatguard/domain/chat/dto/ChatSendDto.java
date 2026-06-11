@@ -1,12 +1,10 @@
 package com.chatguard.domain.chat.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Getter
-@NoArgsConstructor
-public class ChatSendDto {
-
-    private Long roomId;
-    private String content;
+public record ChatSendDto(
+    @JsonProperty("room_id")
+    Long roomId,
+    String content
+) {
 }

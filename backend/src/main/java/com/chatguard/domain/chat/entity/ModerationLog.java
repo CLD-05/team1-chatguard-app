@@ -42,6 +42,10 @@ public class ModerationLog {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     @Column(nullable = false)
     private LocalDateTime checkedAt;
 

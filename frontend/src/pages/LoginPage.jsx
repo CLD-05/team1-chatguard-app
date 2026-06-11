@@ -22,7 +22,7 @@ export default function LoginPage() {
       authLogin(user, token)
       navigate('/home')
     } catch (err) {
-      setError(err.response?.data?.message ?? '로그인 실패. 다시 시도해주세요.')
+      setError(err.response?.data?.error?.message ?? err.response?.data?.message ?? '로그인 실패. 다시 시도해주세요.')
     } finally {
       setLoading(false)
     }

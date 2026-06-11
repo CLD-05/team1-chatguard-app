@@ -19,5 +19,5 @@ public class UserRestController {
         UserLoginResponse response = userService.login(request);
         return ResponseEntity.ok(response);
     }
-    
+
 }
