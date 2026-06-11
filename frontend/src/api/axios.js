@@ -48,12 +48,7 @@ export async function login(username) {
     return { user: { id: 1, username, display_name: username }, token: 'mock-jwt-token' }
   }
   const res = await api.post('/login', { username })
-  // 백엔드 응답: { user_id, access_token } → 프론트 공통 형태 { user, token }로 정규화
-  const { user_id, access_token } = res.data
-  return {
-    user: { id: user_id, username, display_name: username },
-    token: access_token,
-  }
+  return res.data
 }
 
 export async function getRooms() {
@@ -62,6 +57,15 @@ export async function getRooms() {
     return MOCK_ROOMS
   }
   const res = await api.get('/rooms')
+  return res.data
+}
+
+export async function getRoom(roomId) {
+  if (USE_MOCK) {
+    await delay(200)
+    return MOCK_ROOMS.find((r) => r.id === roomId) ?? null
+  }
+  const res = await api.get(`/rooms/${roomId}`)
   return res.data
 }
 

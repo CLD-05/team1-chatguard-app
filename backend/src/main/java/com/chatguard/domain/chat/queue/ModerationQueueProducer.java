@@ -3,10 +3,12 @@ package com.chatguard.domain.chat.queue;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class ModerationQueueProducer {
     private final StringRedisTemplate redisTemplate;
@@ -28,6 +30,7 @@ public class ModerationQueueProducer {
             String payload = objectMapper.writeValueAsString(new ModerationJob(messageId, roomId, userId, content));
             redisTemplate.opsForList().leftPush(queueName, payload);
         } catch (JsonProcessingException e) {
+            log.error("Failed to enqueue moderation task for messageId={}", messageId, e);
             throw new IllegalStateException("Failed to serialize moderation job", e);
         }
     }
@@ -42,5 +45,4 @@ public class ModerationQueueProducer {
         String content
     ) {
     }
-
 }

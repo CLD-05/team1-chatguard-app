@@ -11,6 +11,9 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
 
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
   # JPA (Hibernate) 설정
   jpa:
     hibernate:
@@ -29,6 +32,11 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
+
+logging:
+  level:
+    com.chatguard: DEBUG
+    org.springframework.web.socket: DEBUG
 
 # Actuator
 management:

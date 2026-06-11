@@ -50,5 +50,4 @@ public class UlidGenerator {
 
         return new String(chars);
     }
-
 }

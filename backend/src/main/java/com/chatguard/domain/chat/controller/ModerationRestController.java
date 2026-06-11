@@ -1,6 +1,6 @@
 package com.chatguard.domain.chat.controller;
 
-import com.chatguard.domain.chat.dto.ChatMessageDto;
+import com.chatguard.domain.chat.dto.MessageDto;
 import com.chatguard.domain.chat.dto.ModerationResultRequest;
 import com.chatguard.domain.chat.service.ChatService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +18,7 @@ public class ModerationRestController {
     }
 
     @PostMapping("/results")
-    public ChatMessageDto applyResult(@RequestBody ModerationResultRequest request) {
+    public MessageDto applyResult(@RequestBody ModerationResultRequest request) {
         return chatService.applyModerationResult(request);
     }
 }

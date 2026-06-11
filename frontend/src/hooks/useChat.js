@@ -58,6 +58,10 @@ export default function useChat({ roomId, token, userId, displayName }) {
         setMessages(history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })))
         if (history.length < 50) setHasMore(false)
       }
+    }).catch(() => {
+      if (!unmounted.current && connectionId.current === currentConnectionId) {
+        setHasMore(false)
+      }
     })
 
     if (USE_MOCK) {
