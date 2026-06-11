@@ -1,20 +1,22 @@
 package com.chatguard.domain.chat.ws;
 
-import com.chatguard.domain.chat.dto.ChatSendDto;
-import com.chatguard.domain.chat.service.ChatService;
-import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
-import com.chatguard.global.error.CustomException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Map;
+
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.Map;
+import com.chatguard.domain.chat.dto.ChatSendDto;
+import com.chatguard.domain.chat.service.ChatService;
+import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
+import com.chatguard.global.error.CustomException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -41,12 +43,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         if ("chat.send".equals(type)) {
             Long userId = getUserId(session);
+            Long sessionRoomId = getRoomId(session);
             if (userId == null) return;
             String displayName = getDisplayName(session);
 
             JsonNode payload = root.path("payload");
             ChatSendDto dto = objectMapper.treeToValue(payload, ChatSendDto.class);
-            Long sessionRoomId = getRoomId(session);
             if (dto.roomId() == null) {
                 sendError(session, "INVALID_PAYLOAD", "room_id is required.");
                 return;

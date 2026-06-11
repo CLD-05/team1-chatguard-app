@@ -4,34 +4,37 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
 public class ChatRoomSessionRegistry {
 
-    private final ConcurrentHashMap<Long, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Map<String, WebSocketSession>> rooms = new ConcurrentHashMap<>();
 
     public void register(Long roomId, WebSocketSession session) {
-        rooms.computeIfAbsent(roomId, k -> Collections.newSetFromMap(new ConcurrentHashMap<>()))
-                .add(session);
+        WebSocketSession decoratedSession = new ConcurrentWebSocketSessionDecorator(session, 10000, 65536);
+        
+        rooms.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>())
+                .put(session.getId(), decoratedSession);
     }
 
     public void unregister(Long roomId, WebSocketSession session) {
-        Set<WebSocketSession> sessions = rooms.get(roomId);
+        Map<String, WebSocketSession> sessions = rooms.get(roomId);
         if (sessions != null) {
-            sessions.remove(session);
+            sessions.remove(session.getId());
             if (sessions.isEmpty()) rooms.remove(roomId);
         }
     }
 
     public void broadcast(Long roomId, String payload) {
-        Set<WebSocketSession> sessions = rooms.getOrDefault(roomId, Collections.emptySet());
-        for (WebSocketSession session : sessions) {
+        Map<String, WebSocketSession> sessions = rooms.getOrDefault(roomId, Collections.emptyMap());
+        for (WebSocketSession session : sessions.values()) {
             if (session.isOpen()) {
                 try {
                     session.sendMessage(new TextMessage(payload));

@@ -1,10 +1,10 @@
 package com.chatguard.domain.chat.dto;
 
+import java.time.LocalDateTime;
+
 import com.chatguard.domain.chat.entity.Message;
 import com.chatguard.domain.chat.entity.MessageStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.time.LocalDateTime;
 
 public record MessageDto(
     String id,

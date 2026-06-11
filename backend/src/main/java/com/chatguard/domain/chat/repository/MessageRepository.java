@@ -20,4 +20,8 @@ public interface MessageRepository extends JpaRepository<Message, String> {
         MessageStatus status,
         Pageable pageable
     );
+
+    List<Message> findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(Long roomId, String beforeId, MessageStatus status, Pageable pageable);
+
+    List<Message> findByRoomIdAndStatusNotOrderByIdDesc(Long roomId, MessageStatus status, Pageable pageable);
 }
