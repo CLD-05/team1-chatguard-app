@@ -6,18 +6,18 @@ Spring Boot 기반 Chat Server. 아래는 **로컬 개발 환경에서 실행하
 
 - JDK 17
 - Docker (Docker Compose v2 — `docker compose` 명령)
-- `backend/.env` 생성 — `.env.example`를 복사해 `DB_PASSWORD`, `JWT_SECRET`을 채운다.
+- `backend/.env` 생성 — `.env.example`를 복사해 `DB_PASSWORD`, `JWT_SECRET`을 채운다(`DB_USER`는 기본값 `root` 제공).
 
   ```bash
   cd backend
   cp .env.example .env
-  # .env 를 열어 DB_PASSWORD, JWT_SECRET 값을 설정
+  # .env 를 열어 DB_PASSWORD, JWT_SECRET 값을 설정 (DB_USER는 기본 root 유지)
   ```
 
   - `.env`는 `.gitignore` 대상이라 **커밋되지 않는다**(비밀번호 커밋 금지).
   - 이 값은 MySQL 컨테이너의 root 비밀번호이자 앱의 DB 접속 비밀번호로 함께 쓰인다.
   - `JWT_SECRET`은 32바이트 이상의 임시 로컬 개발용 문자열을 사용한다.
-  - 기본 활성 프로파일은 `local`이며, `.env`의 값이 `application.yml`의 `${...}`로 주입된다.
+  - 활성 프로파일은 하드코딩하지 않는다 — 실행 시 `SPRING_PROFILES_ACTIVE=local`로 지정한다. `DB_USER`/`DB_PASSWORD`/`JWT_SECRET` 등은 `.env`(`spring.config.import`)에서 `application.yml`의 `${...}`로 주입된다. base 프로파일은 `DB_USER`/`DB_PASSWORD`를 폴백 없이 요구하므로(fail-fast), env 누락 시 앱이 기동되지 않는다.
 
 ## 실행 (로컬)
 
@@ -32,8 +32,8 @@ docker compose down -v
 # 2) MySQL · Redis 기동
 docker compose up -d
 
-# 3) 애플리케이션 실행
-./mvnw spring-boot:run
+# 3) 애플리케이션 실행 (local 프로파일 지정)
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
 ```
 
 - **1번 `down -v`** 는 로컬 DB 볼륨을 삭제하고 새로 띄운다. 스키마나 비밀번호가 꼬였을 때 안전하게 초기화하는 용도다. 보관해야 할 로컬 데이터가 있으면 생략한다.
