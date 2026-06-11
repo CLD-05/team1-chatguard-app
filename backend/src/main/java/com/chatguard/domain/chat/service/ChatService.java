@@ -2,6 +2,8 @@ package com.chatguard.domain.chat.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -94,15 +96,17 @@ public class ChatService {
 
     public List<MessageDto> getHistory(Long roomId, String beforeId, int limit) {
         PageRequest page = PageRequest.of(0, Math.max(1, Math.min(limit, 50)));
-        List<Message> messages = beforeId != null && !beforeId.isBlank()
-            ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdAsc(
+        List<Message> messages = new ArrayList<>(beforeId != null && !beforeId.isBlank()
+            ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(
                 roomId,
                 beforeId,
                 MessageStatus.DELETED,
                 page
             )
-            : messageRepository.findByRoomIdAndStatusNotOrderByIdAsc(roomId, MessageStatus.DELETED, page);
+            : messageRepository.findByRoomIdAndStatusNotOrderByIdDesc(roomId, MessageStatus.DELETED, page));
 
+        // 최신 N건을 id 내림차순으로 조회한 뒤(D27 캐치업 윈도우), 렌더 순서대로 시간 오름차순으로 뒤집어 반환한다.
+        Collections.reverse(messages);
         return messages.stream().map(MessageDto::from).toList();
     }
 
