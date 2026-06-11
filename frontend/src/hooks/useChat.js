@@ -11,14 +11,15 @@ function mockUlid() {
   return 'MOCK' + Date.now().toString(36).toUpperCase().padStart(22, '0')
 }
 
-export default function useChat({ roomId, token, userId, displayName }) {
-  const [messages, setMessages]   = useState([])
+export default function useChat({ roomId, token, userId, displayName, onFatalError }) {
+  const [messages, setMessages] = useState([])
   const [connected, setConnected] = useState(USE_MOCK)
-  const [hasMore, setHasMore]     = useState(true)
+  const [hasMore, setHasMore] = useState(true)
+  const [wsError, setWsError] = useState(null) // { code, message }
 
-  const wsRef      = useRef(null)
+  const wsRef = useRef(null)
   const retryDelay = useRef(1_000)
-  const unmounted  = useRef(false)
+  const unmounted = useRef(false)
   const connectionId = useRef(0)
   const reconnectTimer = useRef(null)
 
@@ -32,6 +33,12 @@ export default function useChat({ roomId, token, userId, displayName }) {
           m.id === id ? { ...m, status: action === 'delete' ? 'DELETED' : 'BLURRED' } : m
         )
       )
+    } else if (event.type === 'error') {
+      const code = event.payload?.code ?? 'INTERNAL'
+      setWsError({ code, message: event.payload?.message ?? '오류가 발생했습니다' })
+      if (code === 'ROOM_MISMATCH') {
+        wsRef.current?.close()
+      }
     } else if (event.type === 'server.closing') {
       wsRef.current?.close()
     }
@@ -81,19 +88,25 @@ export default function useChat({ roomId, token, userId, displayName }) {
         if (unmounted.current || connectionId.current !== currentConnectionId) { ws.close(); return }
         retryDelay.current = 1_000
         setConnected(true)
+        setWsError(null)
       }
-      ws.onmessage = (e) => {
-        if (connectionId.current === currentConnectionId) {
-          handleEvent(JSON.parse(e.data))
+      ws.onmessage = (e) => handleEvent(JSON.parse(e.data))
+      ws.onclose = (event) => {
+        setConnected(false)
+        if (event.code === 1008) {
+          // 인증·프로토콜 위반 — 재연결 없이 로그인 화면으로
+          onFatalError?.()
+          return
         }
-      }
-      ws.onclose = () => {
-        if (connectionId.current === currentConnectionId) {
-          setConnected(false)
-        }
-        if (!unmounted.current && connectionId.current === currentConnectionId) {
-          reconnectTimer.current = setTimeout(connect, retryDelay.current)
-          retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)
+        if (!unmounted.current) {
+          // 1001(서버 드레인) 즉시 재연결, 그 외 exponential backoff (jitter는 Week4)
+          const delay = event.code === 1001 ? 0 : retryDelay.current
+          setTimeout(connect, delay)
+          if (event.code !== 1001) {
+            retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)
+          } else {
+            retryDelay.current = 1_000
+          }
         }
       }
       ws.onerror = () => ws.close()
@@ -111,6 +124,7 @@ export default function useChat({ roomId, token, userId, displayName }) {
   }, [roomId, token, handleEvent])
 
   const sendMessage = useCallback((content) => {
+    setWsError(null)
     if (USE_MOCK) {
       const id = mockUlid()
       const msg = {
@@ -136,5 +150,7 @@ export default function useChat({ roomId, token, userId, displayName }) {
     ws.send(JSON.stringify({ type: 'chat.send', payload: { room_id: roomId, content } }))
   }, [roomId, userId, displayName])
 
-  return { messages, connected, sendMessage, loadMore, hasMore }
+  const clearWsError = useCallback(() => setWsError(null), [])
+
+  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError }
 }

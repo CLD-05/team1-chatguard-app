@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
-const MAX_LENGTH = 200
+const MAX_LENGTH = 500
 
-export default function ChatInput({ onSend, disabled }) {
+export default function ChatInput({ onSend, disabled, errorMessage }) {
   const [value, setValue] = useState('')
 
   function submit() {
@@ -42,6 +42,9 @@ export default function ChatInput({ onSend, disabled }) {
           채팅
         </button>
       </div>
+      {errorMessage && (
+        <p className="text-xs text-red-400 mt-1">{errorMessage}</p>
+      )}
       <div className="flex justify-end mt-1">
         <span className="text-[10px] text-gray-600">{value.length}/{MAX_LENGTH}</span>
       </div>
