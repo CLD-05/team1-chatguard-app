@@ -42,12 +42,16 @@ export default function useChat({ roomId, token, userId, displayName }) {
   useEffect(() => {
     unmounted.current = false
 
-    getMessages(roomId).then((history) => {
-      if (!unmounted.current) {
-        setMessages(history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })))
-        if (history.length < 50) setHasMore(false)
-      }
-    })
+    getMessages(roomId)
+      .then((history) => {
+        if (!unmounted.current) {
+          setMessages(history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })))
+          if (history.length < 50) setHasMore(false)
+        }
+      })
+      .catch(() => {
+        if (!unmounted.current) setHasMore(false)
+      })
 
     if (USE_MOCK) {
       setMockWsHandler(handleEvent)
