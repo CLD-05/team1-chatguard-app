@@ -1,0 +1,56 @@
+# team1-chatguard-app/.github/workflows/claude-review.yml
+#
+# Claude 리뷰 — @claude 멘션으로만 호출 (자동 트리거 없음)
+# 사용법: PR 코멘트에 "@claude 리뷰해줘" (org 멤버만 가능)
+#
+# 리뷰 기준(체크리스트)은 이 파일이 아니라 context repo 에 있다:
+#   team1-chatguard-context/prompts/review-app.md  ← 수정은 거기서(즉시 반영)
+#
+# 주의: issue_comment 트리거는 main(기본 브랜치)의 워크플로 파일을 실행하므로
+#       이 파일은 main에 머지된 후부터 동작한다.
+
+name: Claude Review
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write # Claude GitHub App 인증 경로에 필요
+
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  claude:
+    if: >
+      contains(github.event.comment.body, '@claude') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout team context (SSoT)
+        uses: actions/checkout@v4
+        with:
+          repository: CLD-05/team1-chatguard-context
+          path: _context
+
+      - name: Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --max-turns 12
+            --model claude-sonnet-4-6
+            --append-system-prompt "응답을 시작하기 전에 반드시 _context/prompts/review-app.md 를 읽고, 그 문서를 이 PR 리뷰의 역할·컨텍스트 로딩 규칙·체크리스트·출력 형식으로 그대로 따른다. 해당 파일이 존재하지 않으면 리뷰를 진행하지 말고 'context repo 의 prompts/review-app.md 를 찾을 수 없어 리뷰를 중단합니다'라고만 코멘트한다. 한국어로 답한다."
