@@ -61,7 +61,9 @@ def test_db_user_reads_contract_key():
 def test_mock_mode_routes_to_mock_classifier(monkeypatch):
     monkeypatch.setattr(worker, "MODERATOR_MODE", "mock")
     result = worker.classify("바보")
-    assert result["model_version"].endswith("-mock")
+    # model_version은 모드와 무관하게 MODEL_VERSION으로 통일(P2-9). 모드 구분은 reason 필드.
+    assert result["model_version"] == worker.MODEL_VERSION
+    assert "mock" in result["reason"]
     assert result["action"] == "blur"
 
 

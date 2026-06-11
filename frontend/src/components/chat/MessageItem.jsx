@@ -12,8 +12,7 @@ function nameColor(displayName) {
 }
 
 export default function MessageItem({ message, isOwn }) {
-  if (message.status === 'DELETED') return null
-
+  // DELETED 숨김은 ChatPage의 visibleMessages 필터가 단일 진실원이다(D19). 여기서 다시 거르지 않는다.
   const isBlurred = message.status === 'BLURRED'
   const color = isOwn ? 'text-indigo-400' : nameColor(message.display_name)
 
