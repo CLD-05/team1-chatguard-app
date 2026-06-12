@@ -1,5 +1,6 @@
 redis==5.2.1
 prometheus_client==0.21.1
 pymysql==1.1.1
+cryptography==48.0.1
 transformers==4.44.2
 torch==2.5.1
