@@ -91,9 +91,10 @@ def classify(content):
 def classify_with_mock(content):
     normalized = content.lower()
     matched = next((term for term in MOCK_TOXIC_TERMS if term in normalized), None)
+    # model_version 표기는 모드와 무관하게 MODEL_VERSION으로 통일한다(A-2). 모드 구분은 reason 필드가 한다.
     if matched:
-        return build_result(0.90, f"{MODEL_VERSION}-mock", f"mock matched term: {matched}")
-    return build_result(0.05, f"{MODEL_VERSION}-mock", "mock keyword score")
+        return build_result(0.90, MODEL_VERSION, f"mock matched term: {matched}")
+    return build_result(0.05, MODEL_VERSION, "mock keyword score")
 
 
 def classify_with_unsmile(content):
