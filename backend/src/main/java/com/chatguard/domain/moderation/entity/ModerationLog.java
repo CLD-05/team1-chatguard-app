@@ -1,4 +1,4 @@
-package com.chatguard.domain.chat.entity;
+package com.chatguard.domain.moderation.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -31,7 +31,7 @@ public class ModerationLog {
     @Column(length = 20, nullable = false)
     private Verdict verdict;
     
-    private Float score; // AI 판정 점수 (키워드 단계일 경우 NULL 가능)
+    private Float score;
 
     @Column(length = 50)
     private String modelVersion;

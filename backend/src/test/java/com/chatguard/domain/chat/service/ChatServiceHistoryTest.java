@@ -18,6 +18,8 @@ import org.springframework.test.context.ActiveProfiles;
 import com.chatguard.domain.chat.dto.MessageDto;
 import com.chatguard.domain.chat.entity.Message;
 import com.chatguard.domain.chat.entity.MessageStatus;
+import com.chatguard.domain.moderation.service.ModerationLogService;
+import com.chatguard.domain.moderation.service.TextModerationService;
 import com.chatguard.domain.chat.queue.ModerationQueueProducer;
 import com.chatguard.domain.chat.repository.MessageRepository;
 import com.chatguard.domain.room.entity.Room;
@@ -55,6 +57,7 @@ class ChatServiceHistoryTest {
         chatService = new ChatService(
             messageRepository,
             mock(ModerationLogService.class),
+            mock(TextModerationService.class),
             roomRepository,
             mock(ModerationQueueProducer.class),
             mock(StringRedisTemplate.class),
