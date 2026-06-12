@@ -1,7 +1,7 @@
-package com.chatguard.domain.chat.service;
+package com.chatguard.domain.moderation.service;
 
-import com.chatguard.domain.chat.entity.ModerationLog;
-import com.chatguard.domain.chat.repository.ModerationLogRepository;
+import com.chatguard.domain.moderation.entity.ModerationLog;
+import com.chatguard.domain.moderation.repository.ModerationLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;

@@ -1,4 +1,4 @@
-package com.chatguard.domain.chat.entity;
+package com.chatguard.domain.moderation.entity;
 
 import java.time.LocalDateTime;
 

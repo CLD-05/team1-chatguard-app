@@ -15,9 +15,11 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.chatguard.domain.chat.dto.ChatSendDto;
-import com.chatguard.domain.chat.entity.ModerationLog;
-import com.chatguard.domain.chat.entity.Stage;
-import com.chatguard.domain.chat.entity.Verdict;
+import com.chatguard.domain.moderation.entity.ModerationLog;
+import com.chatguard.domain.moderation.entity.Stage;
+import com.chatguard.domain.moderation.entity.Verdict;
+import com.chatguard.domain.moderation.service.ModerationLogService;
+import com.chatguard.domain.moderation.service.TextModerationService;
 import com.chatguard.domain.chat.queue.ModerationQueueProducer;
 import com.chatguard.domain.chat.repository.MessageRepository;
 import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
@@ -31,6 +33,7 @@ class ChatServiceSendMessageTest {
 
     private MessageRepository messageRepository;
     private ModerationLogService moderationLogService;
+    private TextModerationService textModerationService;
     private RoomRepository roomRepository;
     private ModerationQueueProducer moderationQueueProducer;
     private ChatService chatService;
@@ -39,12 +42,14 @@ class ChatServiceSendMessageTest {
     void setUp() {
         messageRepository = mock(MessageRepository.class);
         moderationLogService = mock(ModerationLogService.class);
+        textModerationService = mock(TextModerationService.class);
         roomRepository = mock(RoomRepository.class);
         moderationQueueProducer = mock(ModerationQueueProducer.class);
 
         chatService = new ChatService(
             messageRepository,
             moderationLogService,
+            textModerationService,
             roomRepository,
             moderationQueueProducer,
             mock(StringRedisTemplate.class),
@@ -53,11 +58,15 @@ class ChatServiceSendMessageTest {
         );
 
         when(roomRepository.findById(1L)).thenReturn(Optional.of(mock(Room.class)));
+        // 기본값은 PASS로 설정
+        when(textModerationService.judge(any())).thenReturn(Verdict.PASS);
     }
 
     @Test
     void 키워드_차단시_moderation_log에_26자_ULID를_기록하고_메시지는_저장하지_않는다() {
         // P1-1: ULID는 키워드 검열 전에 1회 발급되어 차단 로그에 그대로 기록되어야 한다(별도 발급 금지).
+        when(textModerationService.judge(any())).thenReturn(Verdict.BLOCK);
+        
         SendMessageResult result = chatService.sendMessage(7L, "viewer7",
             new ChatSendDto(1L, "이건 금칙어 포함 메시지"));
 
