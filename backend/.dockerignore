@@ -1,0 +1,8 @@
+# 빌드 컨텍스트에서 제외 — 캐시 무효화·컨텍스트 비대 방지
+target/
+.git/
+.idea/
+*.iml
+.env
+docker-compose.yml
+README.md

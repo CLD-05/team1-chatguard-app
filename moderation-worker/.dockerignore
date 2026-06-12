@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+test_worker.py
+run-unsmile.ps1
+run-unsmile.sh
+requirements-dev.txt
+README.md
