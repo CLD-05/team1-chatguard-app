@@ -1,34 +1,50 @@
 package com.chatguard.domain.moderation.service;
 
-import com.chatguard.domain.moderation.entity.Verdict;
-import lombok.extern.slf4j.Slf4j;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.Set;
+import com.chatguard.domain.moderation.entity.Verdict;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class TextModerationService {
 
-    private static final Set<String> BANNED_KEYWORDS = Set.of(
-        "badword", 
-        "욕설", 
-        "금칙어",
-        "비속어"
-    );
+    @Value("${moderation.banned-keywords:badword}")
+    private List<String> bannedKeywords;
 
     public Verdict judge(String content) {
         if (content == null || content.isBlank()) {
             return Verdict.PASS;
         }
 
+        if (bannedKeywords == null || bannedKeywords.isEmpty()) {
+            return Verdict.PASS;
+        }
+
         String lowerContent = content.toLowerCase();
         
-        boolean isBlocked = BANNED_KEYWORDS.stream()
+        boolean isBlocked = bannedKeywords.stream()
+                .filter(word -> !word.isBlank())
+                .map(word -> {
+                    try {
+                        if (word.matches(".*[\\u00C0-\\u00FF].*")) {  
+                            return new String(word.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);     
+                        }
+                        return word;
+                    } catch (Exception e) {
+                        return word;
+                    }
+                })
                 .anyMatch(lowerContent::contains);
 
+
         if (isBlocked) {
-            log.info("Message blocked by keyword moderation: {}", content);
+            log.info("Message blocked by keyword moderation (External Config): {}", content);
             return Verdict.BLOCK;
         }
 

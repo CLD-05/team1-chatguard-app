@@ -35,6 +35,8 @@ import com.chatguard.global.util.UlidGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,12 +55,16 @@ public class ChatService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
+    private final MeterRegistry meterRegistry;
 
     @Value("${ROOM_CHANNEL_PREFIX:room:}")
     private String roomChannelPrefix = "room:";
 
     @Transactional
     public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto) {
+        // B-1: chat.send 수신 시점부터 타이머 시작
+        Timer.Sample sample = Timer.start(meterRegistry);
+
         Long roomId = required(dto.roomId(), "room_id");
         String content = normalizeContent(dto.content());
 
@@ -78,6 +84,8 @@ public class ChatService {
                 .content(content)
                 .checkedAt(nowUtc())
                 .build());
+            
+            meterRegistry.counter("chat_messages_total", "result", "blocked_keyword").increment();
             return SendMessageResult.BLOCKED_KEYWORD;
         }
 
@@ -90,11 +98,15 @@ public class ChatService {
             .build());
 
         moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
+        
+        meterRegistry.counter("chat_messages_total", "result", "passed").increment();
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 publish(roomId, ChatMessageDto.from(saved, displayName));
+                // B-1: 전파 완료 후 타이머 중단 및 기록 (p95 < 300ms SLO 타겟)
+                sample.stop(meterRegistry.timer("chat_broadcast_latency_seconds"));
             }
         });
         

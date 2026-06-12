@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 
 import java.util.Optional;
 
@@ -27,6 +28,7 @@ import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 
 class ChatServiceSendMessageTest {
@@ -54,7 +56,8 @@ class ChatServiceSendMessageTest {
             moderationQueueProducer,
             mock(StringRedisTemplate.class),
             new ObjectMapper(),
-            mock(EntityManager.class)
+            mock(EntityManager.class),
+            mock(MeterRegistry.class, RETURNS_DEEP_STUBS)
         );
 
         when(roomRepository.findById(1L)).thenReturn(Optional.of(mock(Room.class)));
