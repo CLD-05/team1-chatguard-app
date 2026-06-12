@@ -35,6 +35,7 @@ import com.chatguard.global.util.UlidGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,7 @@ public class ChatService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
+    private final MeterRegistry meterRegistry;
 
     @Value("${ROOM_CHANNEL_PREFIX:room:}")
     private String roomChannelPrefix = "room:";
@@ -78,6 +80,8 @@ public class ChatService {
                 .content(content)
                 .checkedAt(nowUtc())
                 .build());
+            
+            meterRegistry.counter("chat_messages_total", "result", "blocked_keyword").increment();
             return SendMessageResult.BLOCKED_KEYWORD;
         }
 
@@ -90,6 +94,8 @@ public class ChatService {
             .build());
 
         moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
+        
+        meterRegistry.counter("chat_messages_total", "result", "passed").increment();
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

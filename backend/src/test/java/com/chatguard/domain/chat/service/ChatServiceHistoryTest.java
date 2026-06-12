@@ -30,6 +30,7 @@ import com.chatguard.global.error.CustomException;
 import com.chatguard.global.error.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 
 @DataJpaTest
@@ -62,7 +63,8 @@ class ChatServiceHistoryTest {
             mock(ModerationQueueProducer.class),
             mock(StringRedisTemplate.class),
             new ObjectMapper(),
-            mock(EntityManager.class)
+            mock(EntityManager.class),
+            mock(MeterRegistry.class)
         );
         room = roomRepository.save(Room.builder().name("room").streamerName("s").build());
         user = userRepository.save(User.builder().username("u").displayName("U").build());
