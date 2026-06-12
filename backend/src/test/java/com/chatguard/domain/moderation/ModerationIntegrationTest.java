@@ -19,6 +19,7 @@ import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
 import com.chatguard.domain.moderation.entity.ModerationLog;
 import com.chatguard.domain.moderation.entity.Verdict;
 import com.chatguard.domain.moderation.repository.ModerationLogRepository;
+import com.chatguard.domain.moderation.service.ModerationLogService;
 import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.chatguard.domain.user.entity.User;
@@ -28,7 +29,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Transactional
 class ModerationIntegrationTest {
 
     @Autowired
@@ -49,11 +49,20 @@ class ModerationIntegrationTest {
     @Autowired
     private MeterRegistry meterRegistry;
 
+    @Autowired
+    private ModerationLogService moderationLogService;
+
     private Long roomId;
     private Long userId;
 
     @BeforeEach
     void setUp() {
+        // 테스트 격리: 기존 데이터가 있으면 테스트 결과에 영향을 주므로 삭제
+        messageRepository.deleteAll();
+        moderationLogRepository.deleteAll();
+        roomRepository.deleteAll();
+        userRepository.deleteAll();
+
         Room room = roomRepository.save(Room.builder().name("Test Room").streamerName("Streamer").build());
         User user = userRepository.save(User.builder().username("testuser").displayName("Tester").build());
         roomId = room.getId();
