@@ -4,14 +4,25 @@ Python 기반 AI 검열 Worker. 로컬 개발 환경에서 UnSmile 모델을 실
 
 ## 사전 준비
 
-- Python 3.11 권장
+- Python 3.11 권장 (`torch==2.5.1`은 3.12+ wheel 지원이 제한적이고 3.14 wheel은 없다. 3.11 사용 권장)
 - Docker / Docker Compose
 - 백엔드의 MySQL, Redis 컨테이너 실행 필요
 - `backend/.env` 생성 필요
 
+Windows(PowerShell):
+
 ```powershell
 cd backend
 copy .env.example .env
+# .env 파일에서 DB_PASSWORD 값을 설정
+docker compose up -d
+```
+
+macOS / Linux(bash):
+
+```bash
+cd backend
+cp .env.example .env
 # .env 파일에서 DB_PASSWORD 값을 설정
 docker compose up -d
 ```
@@ -36,22 +47,53 @@ v1에서는 AI 검열 결과로 `delete`를 발행하지 않고 `blur`만 발행
 
 ## Python 환경 설정 및 실행
 
-`moderation-worker` 디렉터리에서 다음 명령만 실행한다.
+`moderation-worker` 디렉터리에서 OS에 맞는 실행 스크립트 하나만 실행한다.
+
+Windows(PowerShell):
 
 ```powershell
 cd moderation-worker
 .\run-unsmile.ps1
 ```
 
-`run-unsmile.ps1`은 다음을 자동 처리한다.
+macOS / Linux(bash):
 
-- `.venv`가 없으면 생성
+```bash
+cd moderation-worker
+./run-unsmile.sh
+```
+
+각 스크립트는 다음을 자동 처리한다.
+
+- `.venv`가 없으면 생성 (macOS/Linux는 `python3.11` 우선 사용)
 - `requirements.txt` 패키지 설치/업데이트
 - `backend/.env`에서 `DB_PASSWORD` 로드
 - Redis, MySQL, 모델 관련 환경변수 기본값 설정
 - worker 실행
 
 처음 실행할 때는 PyTorch와 Hugging Face 모델 다운로드 때문에 시간이 걸릴 수 있다.
+
+> **MySQL 8.0 인증 주의**: MySQL 8.0의 기본 인증(`caching_sha2_password`)을 PyMySQL이 처리하려면
+> `cryptography` 패키지가 필요하다. `requirements.txt`에 포함되어 있으며, 없으면 모델 판정은 되지만
+> DB 쓰기 단계에서 `'cryptography' package is required ...` 오류가 발생한다.
+
+> **Apple Silicon(M-series) 참고**: MPS(GPU)가 감지되어도 worker는 `device` 인자를 넘기지 않아 CPU로 추론한다.
+> 한 문장 추론은 수십 ms 수준이라 로컬 개발에는 충분하다.
+
+### 스크립트 없이 수동 실행 (macOS / Linux)
+
+```bash
+cd moderation-worker
+python3.11 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.txt
+
+export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL_PREFIX=room: \
+  DB_URL="jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
+  DB_USER=root DB_PASSWORD=chatguard1234 \
+  MODERATOR_MODE=unsmile MODEL_VERSION=unsmile-v1 BLOCK_THRESHOLD=0.70 TOKENIZERS_PARALLELISM=false
+.venv/bin/python worker.py
+```
 
 ## 기본 환경변수
 
@@ -74,18 +116,34 @@ METRICS_PORT=8000
 
 다른 값을 쓰려면 실행 전에 환경변수를 먼저 지정한다.
 
+Windows(PowerShell):
+
 ```powershell
 $env:DB_URL="jdbc:mysql://localhost:3307/chatguard_dev"
 $env:REDIS_HOST="localhost"
 .\run-unsmile.ps1
 ```
 
+macOS / Linux(bash):
+
+```bash
+DB_URL="jdbc:mysql://localhost:3307/chatguard_dev" REDIS_HOST="localhost" ./run-unsmile.sh
+```
+
 ## Metrics 확인
 
 worker는 `prometheus_client`로 8000번 포트에 `/metrics`를 연다.
 
+Windows(PowerShell):
+
 ```powershell
 Invoke-RestMethod http://localhost:8000/metrics
+```
+
+macOS / Linux(bash):
+
+```bash
+curl -s http://localhost:8000/metrics | grep moderation_jobs_total
 ```
 
 주요 지표:
@@ -149,11 +207,22 @@ docker compose down -v    # 볼륨까지 삭제, DB 데이터 초기화
 
 ## 문제 해결
 
-PowerShell 실행 정책 때문에 스크립트 실행이 막히는 경우:
+PowerShell 실행 정책 때문에 스크립트 실행이 막히는 경우(Windows):
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
+
+`./run-unsmile.sh: Permission denied`가 나는 경우(macOS / Linux):
+
+```bash
+chmod +x run-unsmile.sh
+```
+
+`'cryptography' package is required for ... auth methods` 오류가 나는 경우:
+
+- MySQL 8.0의 `caching_sha2_password` 인증에는 `cryptography` 패키지가 필요하다.
+- `.venv/bin/python -m pip install -r requirements.txt`로 의존성을 다시 설치한다.
 
 worker가 실행되지만 검열 결과가 반영되지 않는 경우:
 
