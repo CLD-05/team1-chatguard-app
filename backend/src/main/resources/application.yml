@@ -13,6 +13,11 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
 
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
   # JPA (Hibernate) 설정
   jpa:
     hibernate:
