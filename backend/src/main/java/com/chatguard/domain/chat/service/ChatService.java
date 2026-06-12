@@ -36,6 +36,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,9 @@ public class ChatService {
 
     @Transactional
     public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto) {
+        // B-1: chat.send 수신 시점부터 타이머 시작
+        Timer.Sample sample = Timer.start(meterRegistry);
+
         Long roomId = required(dto.roomId(), "room_id");
         String content = normalizeContent(dto.content());
 
@@ -101,6 +105,8 @@ public class ChatService {
             @Override
             public void afterCommit() {
                 publish(roomId, ChatMessageDto.from(saved, displayName));
+                // B-1: 전파 완료 후 타이머 중단 및 기록 (p95 < 300ms SLO 타겟)
+                sample.stop(meterRegistry.timer("chat_broadcast_latency_seconds"));
             }
         });
         
