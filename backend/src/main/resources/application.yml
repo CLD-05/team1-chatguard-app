@@ -6,12 +6,17 @@ spring:
   # MySQL
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useUnicode=true}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
   jackson:
     property-naming-strategy: SNAKE_CASE
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
 
   # JPA (Hibernate) 설정
   jpa:
