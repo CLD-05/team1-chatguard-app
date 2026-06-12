@@ -1,6 +1,7 @@
 package com.chatguard.domain.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,8 @@ import com.chatguard.domain.room.entity.Room;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.chatguard.domain.user.entity.User;
 import com.chatguard.domain.user.repository.UserRepository;
+import com.chatguard.global.error.CustomException;
+import com.chatguard.global.error.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.EntityManager;
@@ -113,6 +116,16 @@ class ChatServiceHistoryTest {
         List<MessageDto> history = chatService.getHistory(roomId, null, 3);
 
         assertThat(ids(history)).containsExactly(id(58), id(59), id(60));
+    }
+
+    @Test
+    void 존재하지_않는_room_id면_ROOM_NOT_FOUND를_던진다() {
+        long missingRoomId = roomId + 9999;
+
+        assertThatThrownBy(() -> chatService.getHistory(missingRoomId, null, 50))
+            .isInstanceOf(CustomException.class)
+            .extracting(e -> ((CustomException) e).getErrorCode())
+            .isEqualTo(ErrorCode.ROOM_NOT_FOUND);
     }
 
     // ── helpers ─────────────────────────────────────────────

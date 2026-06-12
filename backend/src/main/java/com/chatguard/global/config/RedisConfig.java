@@ -1,6 +1,7 @@
 package com.chatguard.global.config;
 
 import com.chatguard.domain.chat.queue.RedisMessageSubscriber;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -19,11 +20,13 @@ public class RedisConfig {
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
-            RedisMessageSubscriber subscriber) {
+            RedisMessageSubscriber subscriber,
+            @Value("${ROOM_CHANNEL_PREFIX:room:}") String roomChannelPrefix) {
 
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.addMessageListener(subscriber, new PatternTopic("room:*"));
+        // A-5 env 계약: 구독 패턴도 ROOM_CHANNEL_PREFIX 기반(기본 room:*)으로 발행 측과 정렬한다.
+        container.addMessageListener(subscriber, new PatternTopic(roomChannelPrefix + "*"));
         return container;
     }
 }

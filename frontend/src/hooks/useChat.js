@@ -39,8 +39,6 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       if (code === 'ROOM_MISMATCH') {
         wsRef.current?.close()
       }
-    } else if (event.type === 'server.closing') {
-      wsRef.current?.close()
     }
   }, [])
 
@@ -101,7 +99,8 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         if (!unmounted.current) {
           // 1001(서버 드레인) 즉시 재연결, 그 외 exponential backoff (jitter는 Week4)
           const delay = event.code === 1001 ? 0 : retryDelay.current
-          setTimeout(connect, delay)
+          // 핸들을 ref에 저장해 cleanup(언마운트/방 전환)에서 예약된 재연결을 취소할 수 있게 한다.
+          reconnectTimer.current = setTimeout(connect, delay)
           if (event.code !== 1001) {
             retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)
           } else {

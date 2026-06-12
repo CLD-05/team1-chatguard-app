@@ -103,14 +103,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: moderation-worker/requirements.txt
+          cache-dependency-path: moderation-worker/requirements-dev.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      # 테스트 코드가 없으므로 바이트코드 컴파일로 문법을 검증한다.
-      # 테스트가 추가되면 이 단계를 pytest 로 교체한다.
-      - name: Syntax check
-        run: python -m compileall -q .
+      - name: Test
+        run: pytest -q

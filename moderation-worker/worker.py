@@ -11,18 +11,22 @@ from prometheus_client import Counter, Histogram, start_http_server
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-MOD_QUEUE_KEY = os.getenv("MOD_QUEUE_KEY") or os.getenv("REDIS_QUEUE_NAME", "mod:queue")
+# A-5 env 계약 키만 읽는다(비계약 폴백 REDIS_QUEUE_NAME 제거).
+MOD_QUEUE_KEY = os.getenv("MOD_QUEUE_KEY", "mod:queue")
 ROOM_CHANNEL_PREFIX = os.getenv("ROOM_CHANNEL_PREFIX", "room:")
 
 DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true")
-DB_USER = os.getenv("DB_USER") or os.getenv("DB_USERNAME", "root")
+# A-5 env 계약 키만 읽는다(비계약 폴백 DB_USERNAME 제거).
+DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
-MODERATOR_MODE = os.getenv("MODERATOR_MODE", "mock").lower()
+# A-1 Worker 책임 = 모델 in-process 판정. 기본값은 real(실모델), mock은 명시 설정 시에만.
+MODERATOR_MODE = os.getenv("MODERATOR_MODE", "real").lower()
 UNSMILE_MODEL_ID = os.getenv("UNSMILE_MODEL_ID", "smilegate-ai/kor_unsmile")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "unsmile-v1")
 BLOCK_THRESHOLD = float(os.getenv("BLOCK_THRESHOLD", "0.70"))
-METRICS_PORT = int(os.getenv("METRICS_PORT", "8000"))
+# A-5 런타임 계약: Worker 메트릭 포트는 8000 고정.
+METRICS_PORT = 8000
 
 MOCK_TOXIC_TERMS = [
     term.strip().lower()
@@ -76,9 +80,10 @@ def log(message):
 def classify(content):
     start = time.perf_counter()
     try:
-        if MODERATOR_MODE == "unsmile":
-            return classify_with_unsmile(content)
-        return classify_with_mock(content)
+        # mock은 명시 설정 시에만. 그 외(real/unsmile/미설정)는 실모델 판정.
+        if MODERATOR_MODE == "mock":
+            return classify_with_mock(content)
+        return classify_with_unsmile(content)
     finally:
         INFERENCE_SECONDS.observe(time.perf_counter() - start)
 
@@ -86,9 +91,10 @@ def classify(content):
 def classify_with_mock(content):
     normalized = content.lower()
     matched = next((term for term in MOCK_TOXIC_TERMS if term in normalized), None)
+    # model_version 표기는 모드와 무관하게 MODEL_VERSION으로 통일한다(A-2). 모드 구분은 reason 필드가 한다.
     if matched:
-        return build_result(0.90, f"{MODEL_VERSION}-mock", f"mock matched term: {matched}")
-    return build_result(0.05, f"{MODEL_VERSION}-mock", "mock keyword score")
+        return build_result(0.90, MODEL_VERSION, f"mock matched term: {matched}")
+    return build_result(0.05, MODEL_VERSION, "mock keyword score")
 
 
 def classify_with_unsmile(content):

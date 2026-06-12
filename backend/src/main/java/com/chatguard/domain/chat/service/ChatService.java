@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -44,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatService {
-    private static final String CHAT_CHANNEL_PREFIX = "room:";
     private static final Set<String> KEYWORD_FILTER = Set.of("욕설1", "욕설2", "금칙어");
 
     private final MessageRepository messageRepository;
@@ -55,6 +55,11 @@ public class ChatService {
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
 
+    // A-5 env 계약: 채널 prefix는 ROOM_CHANNEL_PREFIX(기본 room:)로 주입한다(하드코딩 금지).
+    // 최종 deps는 생성자 주입이지만 이 값만 필드 주입이라 단위 테스트의 생성자 시그니처를 건드리지 않는다.
+    @Value("${ROOM_CHANNEL_PREFIX:room:}")
+    private String roomChannelPrefix = "room:";
+
     @Transactional
     public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto) {
         Long roomId = required(dto.roomId(), "room_id");
@@ -64,9 +69,14 @@ public class ChatService {
             .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
         User user = entityManager.getReference(User.class, userId);
 
+        // A-4 step1: ULID는 키워드 검열보다 먼저 1회 발급한다.
+        // 차단 로그(moderation_logs.message_id)와 저장 메시지(messages.id)가 동일 ULID를 공유해야
+        // 동일한 전송 시도의 감사추적이 끊기지 않는다(D25).
+        String messageId = UlidGenerator.generate();
+
         if (KEYWORD_FILTER.stream().anyMatch(content::contains)) {
             moderationLogService.saveInNewTransaction(ModerationLog.builder()
-                .messageId(UlidGenerator.generate())
+                .messageId(messageId)
                 .stage(Stage.KEYWORD)
                 .verdict(Verdict.BLOCK)
                 .content(content)
@@ -76,7 +86,7 @@ public class ChatService {
         }
 
         Message saved = messageRepository.save(Message.builder()
-            .id(UlidGenerator.generate())
+            .id(messageId)
             .room(room)
             .user(user)
             .content(content)
@@ -95,6 +105,10 @@ public class ChatService {
     }
 
     public List<MessageDto> getHistory(Long roomId, String beforeId, int limit) {
+        // 미존재 room_id는 404 ROOM_NOT_FOUND로 거부한다(빈 배열 200 금지 — A-3 에러표 / D29).
+        if (!roomRepository.existsById(roomId)) {
+            throw new CustomException(ErrorCode.ROOM_NOT_FOUND);
+        }
         PageRequest page = PageRequest.of(0, Math.max(1, Math.min(limit, 50)));
         List<Message> messages = new ArrayList<>(beforeId != null && !beforeId.isBlank()
             ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(
@@ -113,7 +127,7 @@ public class ChatService {
     private void publish(Long roomId, Object dto) {
         try {
             String payload = objectMapper.writeValueAsString(dto);
-            redisTemplate.convertAndSend(CHAT_CHANNEL_PREFIX + roomId, payload);
+            redisTemplate.convertAndSend(roomChannelPrefix + roomId, payload);
         } catch (JsonProcessingException e) {
             log.error("Failed to publish to Redis", e);
         }
