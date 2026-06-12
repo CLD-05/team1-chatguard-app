@@ -1,7 +1,6 @@
 package com.chatguard.domain.chat.queue;
 
 import com.chatguard.domain.chat.ws.ChatRoomSessionRegistry;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Component;
 public class RedisMessageSubscriber implements MessageListener {
 
     private final ChatRoomSessionRegistry registry;
-    private final ObjectMapper objectMapper;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {

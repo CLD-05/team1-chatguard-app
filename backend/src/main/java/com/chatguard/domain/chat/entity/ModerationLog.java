@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "moderation_logs", indexes = {
-    @Index(name = "idx_message_id", columnList = "message_id")
+        @Index(name = "idx_message_id", columnList = "message_id")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -57,15 +57,14 @@ public class ModerationLog {
 
     @Builder
     public ModerationLog(
-        String messageId,
-        Stage stage,
-        Verdict verdict,
-        Float score,
-        String modelVersion,
-        String reason,
-        String content,
-        LocalDateTime checkedAt
-    ) {
+            String messageId,
+            Stage stage,
+            Verdict verdict,
+            Float score,
+            String modelVersion,
+            String reason,
+            String content,
+            LocalDateTime checkedAt) {
         this.messageId = messageId;
         this.stage = stage;
         this.verdict = verdict;
