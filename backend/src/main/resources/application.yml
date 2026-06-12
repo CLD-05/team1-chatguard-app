@@ -52,8 +52,14 @@ management:
   endpoint:
     health:
       show-details: always
+  # 리뷰 반영 [권장 해결]: p95 관측을 위한 Histogram 노출 설정
+  metrics:
+    distribution:
+      percentiles-histogram:
+        chat_broadcast_latency_seconds: true
 
 # 금칙어 외부 주입 규격 추가
 # 시스템 환경 변수 BANNED_KEYWORDS가 있으면 사용하고, 없으면 기본값(badword) 사용
 moderation:
-  banned-keywords: ${banned_keywords:${BANNED_KEYWORDS:badword}}
+  banned-keywords: ${BANNED_KEYWORDS:badword}
+

@@ -32,8 +32,8 @@ public class TextModerationService {
                 .filter(word -> !word.isBlank())
                 .map(word -> {
                     try {
-                        if (word.matches(".*[ãìêê].*") || !java.nio.charset.Charset.forName("US-ASCII").newEncoder().canEncode(word)) {
-                            return new String(word.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+                        if (word.matches(".*[\\u00C0-\\u00FF].*")) {  
+                            return new String(word.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);     
                         }
                         return word;
                     } catch (Exception e) {
@@ -41,6 +41,7 @@ public class TextModerationService {
                     }
                 })
                 .anyMatch(lowerContent::contains);
+
 
         if (isBlocked) {
             log.info("Message blocked by keyword moderation (External Config): {}", content);

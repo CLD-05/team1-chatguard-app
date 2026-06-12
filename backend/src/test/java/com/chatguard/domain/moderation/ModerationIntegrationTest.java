@@ -97,6 +97,21 @@ class ModerationIntegrationTest {
     }
 
     @Test
+    void 한글_금칙어_포함_메시지도_정상적으로_차단된다() {
+        // Given: "욕설"은 application-test.yml에 등록된 한글 금칙어
+        ChatSendDto dto = new ChatSendDto(roomId, "이 메시지에는 욕설이 포함됨");
+
+        // When
+        SendMessageResult result = chatService.sendMessage(userId, "Tester", dto);
+
+        // Then: 1) 결과가 BLOCKED_KEYWORD여야 함
+        assertThat(result).isEqualTo(SendMessageResult.BLOCKED_KEYWORD);
+
+        // Then: 2) messages 테이블에 저장되지 않아야 함
+        assertThat(messageRepository.findAll()).isEmpty();
+    }
+
+    @Test
     void 정상_메시지는_통과되고_메트릭이_기록된다() {
         // Given
         ChatSendDto dto = new ChatSendDto(roomId, "안녕하세요 정상 메시지입니다.");
