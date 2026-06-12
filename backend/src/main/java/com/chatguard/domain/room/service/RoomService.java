@@ -20,22 +20,22 @@ public class RoomService {
 
     public List<RoomResponse> getRooms() {
         return roomRepository.findAll().stream()
-            .map(RoomResponse::from)
-            .toList();
+                .map(RoomResponse::from)
+                .toList();
     }
 
     public RoomResponse getRoom(Long roomId) {
         Room room = roomRepository.findById(roomId)
-            .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
         return RoomResponse.from(room);
     }
 
     @Transactional
     public RoomResponse createRoom(RoomCreateRequest request) {
         Room room = Room.builder()
-            .name(required(request.name(), "name"))
-            .streamerName(required(request.streamerName(), "streamerName"))
-            .build();
+                .name(required(request.name(), "name"))
+                .streamerName(required(request.streamerName(), "streamerName"))
+                .build();
 
         return RoomResponse.from(roomRepository.save(room));
     }
