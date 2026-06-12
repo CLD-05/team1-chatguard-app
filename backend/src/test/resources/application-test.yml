@@ -4,6 +4,9 @@ spring:
   datasource:
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:}
+  sql:
+    init:
+      mode: never
 
 jwt:
   # 테스트 통과용 가짜 비밀키 (아무 의미 없는 32바이트 이상 문자열)
