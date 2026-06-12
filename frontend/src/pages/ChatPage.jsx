@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/auth-context'
 import useChat from '../hooks/useChat'
 import MessageItem from '../components/chat/MessageItem'
 import ChatInput from '../components/chat/ChatInput'
