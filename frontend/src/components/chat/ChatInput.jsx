@@ -13,7 +13,9 @@ export default function ChatInput({ onSend, disabled, errorMessage }) {
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter') {
+    // IME(한글 등) 조합 중 Enter는 음절 확정용이므로 전송하지 않는다.
+    // 조합 중 전송하면 마지막 음절이 확정되며 중복 입력되는 버그가 발생한다.
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault()
       submit()
     }
