@@ -59,7 +59,8 @@ function ChatRoom({ roomId, user, token, logout, navigate }) {
   const onStartReached = useCallback(async () => {
     if (!hasMore) return
     const older = await loadMore(visibleMessages[0]?.id)
-    if (older.length) setFirstItemIndex((i) => i - older.length)
+    const visibleOlder = older.filter((m) => m.status !== 'DELETED')
+    if (visibleOlder.length) setFirstItemIndex((i) => i - visibleOlder.length)
   }, [hasMore, loadMore, visibleMessages])
 
   return (

@@ -1,3 +1,4 @@
+/* eslint-env node */
 import { defineConfig } from '@playwright/test'
 
 export default defineConfig({

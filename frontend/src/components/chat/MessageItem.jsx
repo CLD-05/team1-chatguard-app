@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 const NAME_COLORS = [
   'text-red-400', 'text-yellow-400', 'text-green-400', 'text-cyan-400',
   'text-blue-400', 'text-purple-400', 'text-pink-400', 'text-orange-400',
@@ -10,8 +12,6 @@ function nameColor(displayName) {
   }
   return NAME_COLORS[Math.abs(hash) % NAME_COLORS.length]
 }
-
-import { memo } from 'react'
 
 export default memo(function MessageItem({ message, isOwn }) {
   // DELETED 숨김은 ChatPage의 visibleMessages 필터가 단일 진실원이다(D19). 여기서 다시 거르지 않는다.

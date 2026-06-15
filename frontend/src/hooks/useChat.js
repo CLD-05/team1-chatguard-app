@@ -32,6 +32,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       return
     } else if (event.type === 'moderation.hide') {
       const { id, action } = event.payload
+      // v1 워커는 'blur'만 발행. 'delete'는 향후 수동 모더레이션 대비 예약
       const newStatus = action === 'delete' ? 'DELETED' : 'BLURRED'
       // 버퍼에 아직 있는 메시지도 업데이트 (80ms 배치 전에 moderation.hide가 오는 경우)
       bufferRef.current = bufferRef.current.map((m) =>
@@ -159,7 +160,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       }
       wsRef.current?.close()
     }
-  }, [roomId, token, handleEvent])
+  }, [roomId, token, handleEvent, onFatalError])
 
   const sendMessage = useCallback((content) => {
     setWsError(null)
