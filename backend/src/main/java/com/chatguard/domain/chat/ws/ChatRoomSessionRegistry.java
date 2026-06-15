@@ -59,18 +59,21 @@ public class ChatRoomSessionRegistry {
 
     @PreDestroy
     public void closeAllSessions() {
-        log.info("Graceful Drain: Closing all WebSocket sessions with status 1001");
+        int totalSessions = rooms.values().stream().mapToInt(Map::size).sum();
+        log.info("Graceful Drain: Context closing. Attempting to close {} active sessions with status 1001", totalSessions);
+        
         rooms.values().forEach(sessionMap -> 
             sessionMap.values().forEach(session -> {
                 if (session.isOpen()) {
                     try {
                         // D15: 서버 종료 시 1001 close code로 종료하여 클라이언트 재연결 유도
-                        session.close(CloseStatus.SERVICE_RESTARTED);
+                        session.close(CloseStatus.GOING_AWAY);
                     } catch (IOException e) {
-                        log.warn("Failed to close session during drain: {}", session.getId());
+                        log.warn("Failed to close session during drain: sessionID={}", session.getId());
                     }
                 }
             })
         );
+        log.info("Graceful Drain: Finished closing all sessions.");
     }
 }
