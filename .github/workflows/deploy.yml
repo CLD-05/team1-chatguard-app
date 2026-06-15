@@ -44,11 +44,11 @@ jobs:
         include:
           # ★ ecr_repo 는 infra의 ECR 이름과 글자 단위 일치해야 한다 (team1-dev- prefix, §2)
           - component: backend
-            ecr_repo: team1-dev-chat
+            ecr_repo: team1-dev-api-server
           - component: moderation-worker
-            ecr_repo: team1-dev-worker
+            ecr_repo: team1-dev-ai-worker
           - component: frontend
-            ecr_repo: team1-dev-front
+            ecr_repo: team1-dev-frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -85,9 +85,9 @@ jobs:
         working-directory: overlays/dev
         run: |
           kustomize edit set image \
-            "${ECR_REGISTRY}/team1-dev-chat:${GITHUB_SHA}" \
-            "${ECR_REGISTRY}/team1-dev-worker:${GITHUB_SHA}" \
-            "${ECR_REGISTRY}/team1-dev-front:${GITHUB_SHA}"
+            "${ECR_REGISTRY}/team1-dev-api-server:${GITHUB_SHA}" \
+            "${ECR_REGISTRY}/team1-dev-ai-worker:${GITHUB_SHA}" \
+            "${ECR_REGISTRY}/team1-dev-frontend:${GITHUB_SHA}"
         env:
           ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
 

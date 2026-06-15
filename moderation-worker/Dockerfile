@@ -19,9 +19,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 # CPU 인덱스를 우선, 그 외 패키지는 PyPI 폴백.
 RUN pip install --no-cache-dir \
-      --index-url https://download.pytorch.org/whl/cpu \
-      --extra-index-url https://pypi.org/simple \
-      -r requirements.txt
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple \
+    -r requirements.txt
 
 # 모델을 이미지에 동결. HF_HOME이 모델 캐시 위치를 결정한다.
 ENV HF_HOME=/opt/hf-cache
@@ -30,7 +30,7 @@ RUN python -c "from transformers import pipeline; pipeline('text-classification'
 # ---------- 2단계: 런타임 ----------
 FROM python:3.11-slim
 
-RUN groupadd --system app && useradd --system --gid app --no-create-home app
+RUN groupadd --system --gid 999 app && useradd --system --uid 999 --gid 999 --no-create-home app
 
 COPY --from=build /opt/venv /opt/venv
 # 캐시 소유권을 비루트 유저로 — transformers가 락파일 등을 쓸 수 있어야 한다.
@@ -43,7 +43,7 @@ ENV PATH="/opt/venv/bin:$PATH" \
 WORKDIR /app
 COPY --chown=app:app worker.py .
 
-USER app
+USER 999
 EXPOSE 8000
 
 # exec form: python이 PID 1 — Week4 graceful shutdown(D11, SIGTERM 처리)의 전제.

@@ -23,8 +23,8 @@ RUN ./mvnw -B -DskipTests package \
 FROM eclipse-temurin:17-jre-jammy
 
 # 비루트 실행 (k8s securityContext.runAsNonRoot 대비)
-RUN groupadd --system app && useradd --system --gid app --no-create-home app
-USER app
+RUN groupadd --system --gid 999 app && useradd --system --uid 999 --gid 999 --no-create-home app
+USER 999
 
 WORKDIR /app
 COPY --from=build /workspace/app.jar app.jar
