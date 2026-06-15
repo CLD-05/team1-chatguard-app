@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getMessages, setMockWsHandler, simulateModerationHide, USE_MOCK } from '../api/axios'
 
+
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL
   ?? (import.meta.env.DEV
     ? 'ws://127.0.0.1:8080/ws'
@@ -22,16 +23,22 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   const unmounted = useRef(false)
   const connectionId = useRef(0)
   const reconnectTimer = useRef(null)
+  const bufferRef = useRef([])
+  const isReconnect = useRef(false)
 
   const handleEvent = useCallback((event) => {
     if (event.type === 'chat.message') {
-      setMessages((prev) => [...prev, { ...event.payload, status: 'VISIBLE' }])
+      bufferRef.current.push({ ...event.payload, status: 'VISIBLE' })
+      return
     } else if (event.type === 'moderation.hide') {
       const { id, action } = event.payload
+      const newStatus = action === 'delete' ? 'DELETED' : 'BLURRED'
+      // 버퍼에 아직 있는 메시지도 업데이트 (80ms 배치 전에 moderation.hide가 오는 경우)
+      bufferRef.current = bufferRef.current.map((m) =>
+        m.id === id ? { ...m, status: newStatus } : m
+      )
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === id ? { ...m, status: action === 'delete' ? 'DELETED' : 'BLURRED' } : m
-        )
+        prev.map((m) => (m.id === id ? { ...m, status: newStatus } : m))
       )
     } else if (event.type === 'error') {
       const code = event.payload?.code ?? 'INTERNAL'
@@ -42,12 +49,27 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
     }
   }, [])
 
-  const loadMore = useCallback(async () => {
-    const oldest = messages[0]?.id
-    const history = await getMessages(roomId, oldest)
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (!bufferRef.current.length) return
+      const batch = bufferRef.current
+      bufferRef.current = []
+      setMessages((prev) => [...prev, ...batch])
+    }, 80)
+    return () => clearInterval(t)
+  }, [])
+
+  const loadMore = useCallback(async (before) => {
+    const history = await getMessages(roomId, before)
     if (history.length < 50) setHasMore(false)
-    setMessages((prev) => [...history, ...prev])
-  }, [messages, roomId])
+    if (history.length) {
+      setMessages((prev) => [
+        ...history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })),
+        ...prev,
+      ])
+    }
+    return history
+  }, [roomId])
 
   useEffect(() => {
     const currentConnectionId = connectionId.current + 1
@@ -87,6 +109,24 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         retryDelay.current = 1_000
         setConnected(true)
         setWsError(null)
+        if (isReconnect.current) {
+          getMessages(roomId).then((latest) => {
+            if (unmounted.current) return
+            setMessages((prev) => {
+              const latestMap = new Map(latest.map((m) => [m.id, m]))
+              const updated = prev.map((m) => {
+                const fresh = latestMap.get(m.id)
+                return fresh ? { ...m, status: fresh.status ?? m.status } : m
+              })
+              const prevIds = new Set(prev.map((m) => m.id))
+              const missed = latest
+                .filter((m) => !prevIds.has(m.id))
+                .map((m) => ({ ...m, status: m.status ?? 'VISIBLE' }))
+              return [...updated, ...missed]
+            })
+          }).catch(() => {})
+        }
+        isReconnect.current = true
       }
       ws.onmessage = (e) => handleEvent(JSON.parse(e.data))
       ws.onclose = (event) => {
@@ -97,9 +137,8 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
           return
         }
         if (!unmounted.current) {
-          // 1001(서버 드레인) 즉시 재연결, 그 외 exponential backoff (jitter는 Week4)
-          const delay = event.code === 1001 ? 0 : retryDelay.current
-          // 핸들을 ref에 저장해 cleanup(언마운트/방 전환)에서 예약된 재연결을 취소할 수 있게 한다.
+          // 1001(서버 드레인) 즉시 재연결, 그 외 jittered exponential backoff
+          const delay = event.code === 1001 ? 0 : Math.random() * retryDelay.current
           reconnectTimer.current = setTimeout(connect, delay)
           if (event.code !== 1001) {
             retryDelay.current = Math.min(retryDelay.current * 2, MAX_RETRY_DELAY)

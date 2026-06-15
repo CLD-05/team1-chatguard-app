@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
+import { Virtuoso } from 'react-virtuoso'
 import { useAuth } from '../context/auth-context'
 import useChat from '../hooks/useChat'
 import MessageItem from '../components/chat/MessageItem'
 import ChatInput from '../components/chat/ChatInput'
 import { getRoom } from '../api/axios'
+
+const START_INDEX = 1_000_000
 
 function ChatRoom({ roomId, user, token, logout, navigate }) {
   const [room, setRoom] = useState(null)
@@ -25,25 +28,39 @@ function ChatRoom({ roomId, user, token, logout, navigate }) {
     return () => clearTimeout(t)
   }, [wsError, clearWsError])
 
-  const bottomRef    = useRef(null)
-  const containerRef = useRef(null)
-  const [autoScroll, setAutoScroll] = useState(true)
+  const virtuosoRef    = useRef(null)
+  const userPausedRef  = useRef(false)
+  const [atBottom, setAtBottom]           = useState(true)
+  const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
 
   useEffect(() => {
     getRoom(roomId).then(setRoom).catch(() => {})
   }, [roomId])
 
   useEffect(() => {
-    if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, autoScroll])
+    if (import.meta.env.DEV) window.__chatMessages__ = messages
+  }, [messages])
 
-  function handleScroll() {
-    const el = containerRef.current
-    if (!el) return
-    setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 80)
-  }
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => m.status !== 'DELETED'),
+    [messages],
+  )
 
-  const visibleMessages = messages.filter((m) => m.status !== 'DELETED')
+  const renderItem = useCallback(
+    (_i, m) => <MessageItem message={m} isOwn={m.user_id === user?.id} />,
+    [user?.id],
+  )
+
+  const followOutput = useCallback((isAtBottom) => {
+    if (userPausedRef.current) return false
+    return isAtBottom ? 'auto' : false
+  }, [])
+
+  const onStartReached = useCallback(async () => {
+    if (!hasMore) return
+    const older = await loadMore(visibleMessages[0]?.id)
+    if (older.length) setFirstItemIndex((i) => i - older.length)
+  }, [hasMore, loadMore, visibleMessages])
 
   return (
     <div className="h-screen flex bg-gray-950">
@@ -95,35 +112,32 @@ function ChatRoom({ roomId, user, token, logout, navigate }) {
           <span className="text-xs text-gray-500">{user?.display_name}</span>
         </header>
 
-        <div
-          ref={containerRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto py-2 flex flex-col"
-        >
-          {hasMore && (
-            <button
-              onClick={loadMore}
-              className="text-xs text-gray-500 hover:text-indigo-400 transition-colors mx-auto mb-2 px-3 py-1 border border-gray-700 hover:border-indigo-500 rounded-full"
-            >
-              이전 메시지 불러오기
-            </button>
-          )}
+        {visibleMessages.length === 0 && (
+          <p className="text-center text-gray-600 text-xs py-8 shrink-0">채팅을 시작해보세요!</p>
+        )}
 
-          {visibleMessages.length === 0 && (
-            <p className="text-center text-gray-600 text-xs py-8">채팅을 시작해보세요!</p>
-          )}
+        <Virtuoso
+          ref={(r) => { virtuosoRef.current = r; if (import.meta.env.DEV) window.__virtuoso__ = r }}
+          onWheel={(e) => { if (e.deltaY < 0) userPausedRef.current = true }}
+          data={visibleMessages}
+          firstItemIndex={firstItemIndex}
+          computeItemKey={(_, m) => m.id}
+          itemContent={renderItem}
+          followOutput={followOutput}
+          atBottomThreshold={80}
+          atBottomStateChange={(b) => { if (b) userPausedRef.current = false; setAtBottom(b) }}
+          startReached={onStartReached}
+          overscan={300}
+          className="flex-1"
+        />
 
-          {visibleMessages.map((msg) => (
-            <MessageItem key={msg.id} message={msg} isOwn={msg.user_id === user?.id} />
-          ))}
-
-          <div ref={bottomRef} />
-        </div>
-
-        {!autoScroll && (
+        {!atBottom && (
           <div className="flex justify-center pb-1">
             <button
-              onClick={() => { setAutoScroll(true); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }}
+              onClick={() => {
+                userPausedRef.current = false
+                virtuosoRef.current?.scrollToIndex({ index: 'LAST', behavior: 'smooth' })
+              }}
               className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-full transition-colors"
             >
               ↓ 최신 채팅으로

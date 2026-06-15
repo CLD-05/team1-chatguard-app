@@ -11,13 +11,15 @@ function nameColor(displayName) {
   return NAME_COLORS[Math.abs(hash) % NAME_COLORS.length]
 }
 
-export default function MessageItem({ message, isOwn }) {
+import { memo } from 'react'
+
+export default memo(function MessageItem({ message, isOwn }) {
   // DELETED 숨김은 ChatPage의 visibleMessages 필터가 단일 진실원이다(D19). 여기서 다시 거르지 않는다.
   const isBlurred = message.status === 'BLURRED'
   const color = isOwn ? 'text-indigo-400' : nameColor(message.display_name)
 
   return (
-    <div className="px-3 py-0.5 hover:bg-white/5 rounded transition-colors group">
+    <div data-testid={`msg-${message.id}`} className="px-3 py-0.5 hover:bg-white/5 rounded transition-colors group">
       <p className="text-sm leading-relaxed break-words">
         <span className="text-gray-600 text-xs mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity select-none">
           {new Date(message.created_at).toLocaleTimeString('ko-KR', {
@@ -39,4 +41,4 @@ export default function MessageItem({ message, isOwn }) {
       </p>
     </div>
   )
-}
+})
