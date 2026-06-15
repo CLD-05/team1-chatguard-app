@@ -66,7 +66,8 @@ public class ChatRoomSessionRegistry {
             sessionMap.values().forEach(session -> {
                 if (session.isOpen()) {
                     try {
-                        session.close(CloseStatus.SERVICE_RESTARTED);
+                        // D15: 서버 종료 시 1001 close code로 종료하여 클라이언트 재연결 유도
+                        session.close(CloseStatus.GOING_AWAY);
                     } catch (IOException e) {
                         log.warn("Failed to close session during drain: sessionID={}", session.getId());
                     }

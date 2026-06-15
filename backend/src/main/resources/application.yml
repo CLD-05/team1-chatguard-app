@@ -2,6 +2,8 @@ server:
   shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   # 로컬: .env를 properties로 읽어 ${DB_PASSWORD} 등을 단일 소스로 해석한다.
   # optional이라 .env가 없는 운영/CI에서는 무시되고 실제 환경변수/Secret이 쓰인다.
   config:
