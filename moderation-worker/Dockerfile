@@ -9,42 +9,42 @@
 # 런타임 계약(A-5): 메트릭/프로브 포트 8000 (worker.py에 고정).
 
 # ---------- 1단계: 의존성 + 모델 ----------
-    FROM python:3.11-slim AS build
-    WORKDIR /workspace
-    
-    # venv에 설치해 런타임 스테이지로 통째로 복사한다(빌드 캐시·pip 잔재 제외).
-    RUN python -m venv /opt/venv
-    ENV PATH="/opt/venv/bin:$PATH"
-    
-    COPY requirements.txt .
-    # CPU 인덱스를 우선, 그 외 패키지는 PyPI 폴백.
-    RUN pip install --no-cache-dir \
-          --index-url https://download.pytorch.org/whl/cpu \
-          --extra-index-url https://pypi.org/simple \
-          -r requirements.txt
-    
-    # 모델을 이미지에 동결. HF_HOME이 모델 캐시 위치를 결정한다.
-    ENV HF_HOME=/opt/hf-cache
-    RUN python -c "from transformers import pipeline; pipeline('text-classification', model='smilegate-ai/kor_unsmile', top_k=None)"
-    
-    # ---------- 2단계: 런타임 ----------
-    FROM python:3.11-slim
-    
-    RUN groupadd --system --gid 999 app && useradd --system --uid 999 --gid 999 --no-create-home app
-    
-    COPY --from=build /opt/venv /opt/venv
-    # 캐시 소유권을 비루트 유저로 — transformers가 락파일 등을 쓸 수 있어야 한다.
-    COPY --from=build --chown=app:app /opt/hf-cache /opt/hf-cache
-    
-    ENV PATH="/opt/venv/bin:$PATH" \
-        HF_HOME=/opt/hf-cache \
-        PYTHONUNBUFFERED=1
-    
-    WORKDIR /app
-    COPY --chown=app:app worker.py .
-    
-    USER 999
-    EXPOSE 8000
-    
-    # exec form: python이 PID 1 — Week4 graceful shutdown(D11, SIGTERM 처리)의 전제.
-    ENTRYPOINT ["python", "worker.py"]
+FROM python:3.11-slim AS build
+WORKDIR /workspace
+
+# venv에 설치해 런타임 스테이지로 통째로 복사한다(빌드 캐시·pip 잔재 제외).
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+# CPU 인덱스를 우선, 그 외 패키지는 PyPI 폴백.
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple \
+    -r requirements.txt
+
+# 모델을 이미지에 동결. HF_HOME이 모델 캐시 위치를 결정한다.
+ENV HF_HOME=/opt/hf-cache
+RUN python -c "from transformers import pipeline; pipeline('text-classification', model='smilegate-ai/kor_unsmile', top_k=None)"
+
+# ---------- 2단계: 런타임 ----------
+FROM python:3.11-slim
+
+RUN groupadd --system --gid 999 app && useradd --system --uid 999 --gid 999 --no-create-home app
+
+COPY --from=build /opt/venv /opt/venv
+# 캐시 소유권을 비루트 유저로 — transformers가 락파일 등을 쓸 수 있어야 한다.
+COPY --from=build --chown=app:app /opt/hf-cache /opt/hf-cache
+
+ENV PATH="/opt/venv/bin:$PATH" \
+    HF_HOME=/opt/hf-cache \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+COPY --chown=app:app worker.py .
+
+USER 999
+EXPOSE 8000
+
+# exec form: python이 PID 1 — Week4 graceful shutdown(D11, SIGTERM 처리)의 전제.
+ENTRYPOINT ["python", "worker.py"]
