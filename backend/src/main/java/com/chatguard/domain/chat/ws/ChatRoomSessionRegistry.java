@@ -1,11 +1,14 @@
 package com.chatguard.domain.chat.ws;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
+import org.springframework.web.socket.CloseStatus;
 
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -16,6 +19,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatRoomSessionRegistry {
 
     private final ConcurrentHashMap<Long, Map<String, WebSocketSession>> rooms = new ConcurrentHashMap<>();
+    private final MeterRegistry meterRegistry;
+
+    public ChatRoomSessionRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+        // B-2: ws_active_connections (gauge) 등록
+        meterRegistry.gauge("ws_active_connections", this, registry -> 
+            registry.rooms.values().stream().mapToInt(Map::size).sum()
+        );
+    }
 
     public void register(Long roomId, WebSocketSession session) {
         WebSocketSession decoratedSession = new ConcurrentWebSocketSessionDecorator(session, 10000, 65536);
@@ -43,5 +55,22 @@ public class ChatRoomSessionRegistry {
                 }
             }
         }
+    }
+
+    @PreDestroy
+    public void closeAllSessions() {
+        log.info("Graceful Drain: Closing all WebSocket sessions with status 1001");
+        rooms.values().forEach(sessionMap -> 
+            sessionMap.values().forEach(session -> {
+                if (session.isOpen()) {
+                    try {
+                        // D15: 서버 종료 시 1001 close code로 종료하여 클라이언트 재연결 유도
+                        session.close(CloseStatus.SERVICE_RESTARTED);
+                    } catch (IOException e) {
+                        log.warn("Failed to close session during drain: {}", session.getId());
+                    }
+                }
+            })
+        );
     }
 }
