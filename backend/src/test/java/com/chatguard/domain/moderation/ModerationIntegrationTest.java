@@ -64,7 +64,11 @@ class ModerationIntegrationTest {
         userRepository.deleteAll();
 
         Room room = roomRepository.save(Room.builder().name("Test Room").streamerName("Streamer").build());
-        User user = userRepository.save(User.builder().username("testuser").displayName("Tester").build());
+        User user = userRepository.save(User.builder()
+                .username("testuser")
+                .password("password")
+                .displayName("Tester")
+                .build());
         roomId = room.getId();
         userId = user.getId();
     }

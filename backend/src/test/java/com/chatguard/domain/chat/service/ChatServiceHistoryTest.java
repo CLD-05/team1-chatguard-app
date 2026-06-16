@@ -67,7 +67,7 @@ class ChatServiceHistoryTest {
             mock(MeterRegistry.class)
         );
         room = roomRepository.save(Room.builder().name("room").streamerName("s").build());
-        user = userRepository.save(User.builder().username("u").displayName("U").build());
+        user = userRepository.save(User.builder().username("u").password("p").displayName("U").build());
         roomId = room.getId();
     }
 
