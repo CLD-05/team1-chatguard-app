@@ -5,6 +5,7 @@ import { login } from '../api/axios'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
   const { login: authLogin }    = useAuth()
@@ -13,16 +14,22 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     const name = username.trim()
-    if (!name) return
+    const pass = password.trim()
+    if (!name || !pass) return
 
     setLoading(true)
     setError('')
     try {
-      const { user, token } = await login(name)
+      const { user, token } = await login(name, pass)
       authLogin(user, token)
       navigate('/home')
     } catch (err) {
-      setError(err.response?.data?.error?.message ?? err.response?.data?.message ?? '로그인 실패. 다시 시도해주세요.')
+      const status = err.response?.status
+      if (status === 401) {
+        setError('아이디 또는 비밀번호가 일치하지 않습니다.')
+      } else {
+        setError(err.response?.data?.error?.message ?? err.response?.data?.message ?? '로그인 실패. 다시 시도해주세요.')
+      }
     } finally {
       setLoading(false)
     }
@@ -49,9 +56,20 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="사용할 닉네임을 입력하세요"
+              placeholder="닉네임을 입력하세요"
               maxLength={50}
               autoFocus
+              className="w-full bg-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">비밀번호</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호를 입력하세요"
               className="w-full bg-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition"
             />
           </div>
@@ -62,7 +80,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading || !username.trim()}
+            disabled={loading || !username.trim() || !password.trim()}
             className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-xl transition-colors text-sm"
           >
             {loading ? '입장 중...' : '입장하기'}

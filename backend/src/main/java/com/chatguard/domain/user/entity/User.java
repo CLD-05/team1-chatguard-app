@@ -24,6 +24,9 @@ public class User {
     @Column(length = 50, unique = true, nullable = false)
     private String username;
 
+    @Column(nullable = false)
+    private String password;
+
     @Column(length = 50)
     private String displayName;
 
@@ -32,8 +35,9 @@ public class User {
     private LocalDateTime createdAt;
 
     @Builder
-    public User(String username, String displayName) {
+    public User(String username, String password, String displayName) {
         this.username = username;
+        this.password = password;
         this.displayName = displayName;
     }
 }
