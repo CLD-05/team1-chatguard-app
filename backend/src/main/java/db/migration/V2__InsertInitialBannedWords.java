@@ -62,7 +62,7 @@ public class V2__InsertInitialBannedWords extends BaseJavaMigration {
                 new SingleConnectionDataSource(context.getConnection(), true));
 
         // MySQL IGNORE 문법을 사용하여 동일 단어 중복 삽입 시 에러 없이 무시합니다.
-        String sql = "INSERT IGNORE INTO banned_words (word, created_at) VALUES (?, NOW())";
+        String sql = "INSERT IGNORE INTO banned_words (word, created_at) VALUES (?, UTC_TIMESTAMP())";
         jdbcTemplate.batchUpdate(sql, words.stream()
                 .map(word -> new Object[]{word})
                 .collect(Collectors.toList()));

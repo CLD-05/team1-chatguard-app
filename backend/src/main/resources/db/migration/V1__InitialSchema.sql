@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS messages (
-    id VARCHAR(26) PRIMARY KEY,
+    id CHAR(26) PRIMARY KEY,
     content TEXT NOT NULL,
     status VARCHAR(20) NOT NULL,
     user_id BIGINT NOT NULL,
@@ -32,7 +32,7 @@ CREATE INDEX idx_room_created_at ON messages (room_id, created_at);
 
 CREATE TABLE IF NOT EXISTS moderation_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    message_id VARCHAR(26) NOT NULL,
+    message_id CHAR(26) NOT NULL,
     stage VARCHAR(20) NOT NULL,
     verdict VARCHAR(20) NOT NULL,
     score FLOAT,
@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
     content TEXT,
     checked_at DATETIME(6) NOT NULL
 );
+
+CREATE INDEX idx_moderation_logs_message_id ON moderation_logs (message_id);
 
 CREATE TABLE IF NOT EXISTS banned_words (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
