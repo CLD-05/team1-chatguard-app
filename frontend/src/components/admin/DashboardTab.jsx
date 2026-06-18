@@ -12,7 +12,7 @@ export default function DashboardTab({ guard }) {
 
   useEffect(() => {
     guard(getStats()).then(setStats).catch(() => {})
-    guard(getLogs({ verdict: 'BLOCK', page: 0, size: 10 }))
+    guard(getLogs({ verdict: 'BLOCK', limit: 10 }))
       .then((res) => setRecentLogs(res.content ?? []))
       .catch(() => {})
   }, [guard])

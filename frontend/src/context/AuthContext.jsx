@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
     setState({ user: null, token: null })
   }, [])
 
-  const isAdmin = state.user?.role === 'ROLE_ADMIN'
+  const isAdmin = state.user?.role === 'ADMIN'
 
   return (
     <AuthContext.Provider value={{ ...state, login, logout, isAdmin }}>
