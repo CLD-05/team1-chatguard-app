@@ -85,9 +85,9 @@ jobs:
         working-directory: overlays/dev
         run: |
           kustomize edit set image \
-            "${ECR_REGISTRY}/team1-dev-api-server:${GITHUB_SHA}" \
-            "${ECR_REGISTRY}/team1-dev-ai-worker:${GITHUB_SHA}" \
-            "${ECR_REGISTRY}/team1-dev-frontend:${GITHUB_SHA}"
+            team1-dev-api-server=${ECR_REGISTRY}/team1-dev-api-server:${GITHUB_SHA} \
+            team1-dev-ai-worker=${ECR_REGISTRY}/team1-dev-ai-worker:${GITHUB_SHA} \
+            team1-dev-frontend=${ECR_REGISTRY}/team1-dev-frontend:${GITHUB_SHA}
         env:
           ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
 
