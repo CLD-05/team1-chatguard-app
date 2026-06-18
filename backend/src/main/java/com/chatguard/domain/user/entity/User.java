@@ -30,14 +30,19 @@ public class User {
     @Column(length = 50)
     private String displayName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private UserRole role;
+
     @CreatedDate
     @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public User(String username, String password, String displayName) {
+    public User(String username, String password, String displayName, UserRole role) {
         this.username = username;
         this.password = password;
         this.displayName = displayName;
+        this.role = role != null ? role : UserRole.USER;
     }
 }
