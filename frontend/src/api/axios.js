@@ -45,13 +45,13 @@ const MOCK_MESSAGES = [
 export async function login(username, password) {
   if (USE_MOCK) {
     await delay(500)
-    return { user: { id: 1, username, display_name: username }, token: 'mock-jwt-token' }
+    return { user: { id: 1, username, display_name: username, role: 'ADMIN' }, token: 'mock-jwt-token' }
   }
   const res = await api.post('/login', { username, password })
   // 백엔드 응답(A-2): { user_id, display_name, token } → 프론트 공통 형태 { user, token }로 정규화
-  const { user_id, display_name, token } = res.data
+  const { user_id, display_name, token, role } = res.data
   return {
-    user: { id: user_id, username, display_name: display_name ?? username },
+    user: { id: user_id, username, display_name: display_name ?? username, role },
     token,
   }
 }
