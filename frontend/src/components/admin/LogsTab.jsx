@@ -24,7 +24,7 @@ export default function LogsTab({ guard }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
-    guard(getLogs({ stage: stage || undefined, verdict: stage === 'AI' ? 'BLOCK' : undefined, before, limit: LIMIT }))
+    guard(getLogs({ stage: stage || 'all', before, limit: LIMIT }))
       .then((data) => setLogs(data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -65,7 +65,6 @@ export default function LogsTab({ guard }) {
               <thead className="sticky top-0 bg-gray-800 z-10">
                 <tr className="border-b border-gray-700 text-left">
                   <th className="px-5 py-3 text-xs text-gray-500 font-normal">메시지</th>
-                  <th className="px-4 py-3 text-xs text-gray-500 font-normal">유저</th>
                   <th className="px-4 py-3 text-xs text-gray-500 font-normal">단계</th>
                   <th className="px-4 py-3 text-xs text-gray-500 font-normal">판정</th>
                   <th className="px-4 py-3 text-xs text-gray-500 font-normal">점수</th>
@@ -79,7 +78,6 @@ export default function LogsTab({ guard }) {
                   {logs.map((log, i) => (
                     <tr key={log.id} className={i !== logs.length - 1 ? 'border-b border-gray-700/60' : ''}>
                       <td className="px-5 py-3 text-gray-300 max-w-[160px] truncate">{log.content ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{log.sender_name ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{STAGE_LABEL[log.stage] ?? log.stage}</td>
                       <td className={`px-4 py-3 text-xs font-medium ${VERDICT_COLOR[log.verdict] ?? 'text-gray-400'}`}>{log.verdict}</td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{log.score != null ? log.score.toFixed(2) : '—'}</td>
@@ -87,7 +85,7 @@ export default function LogsTab({ guard }) {
                     </tr>
                   ))}
                   {logs.length === 0 && (
-                    <tr><td colSpan={6} className="py-10 text-center text-gray-500 text-sm">로그가 없습니다.</td></tr>
+                    <tr><td colSpan={5} className="py-10 text-center text-gray-500 text-sm">로그가 없습니다.</td></tr>
                   )}
                 </tbody>
               </table>
