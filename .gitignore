@@ -353,4 +353,7 @@ gradle-app.setting
 # Java heap dump
 *.hprof
 
+# python
+moderation-worker/evaluation/results/*
+
 # End of https://www.toptal.com/developers/gitignore/api/dotenv,java,eclipse,intellij,visualstudiocode,maven,gradle,windows,macos,react

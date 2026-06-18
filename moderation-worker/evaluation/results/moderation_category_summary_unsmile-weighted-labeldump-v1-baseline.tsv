@@ -1,6 +1,0 @@
-category	total	accuracy	correct	fp	fn	missing	actual_blur	actual_pass
-공격적으로 보이는 무해 문장	40	0.5250	21	0	0	19	0	21
-키워드 우회형	40	0.4500	18	0	10	12	18	10
-욕설 없는 비하/혐오	40	0.3750	15	0	16	9	15	16
-경계 케이스	40	0.5250	21	0	8	11	6	23
-독한 PASS	40	0.6250	25	4	0	11	4	25
