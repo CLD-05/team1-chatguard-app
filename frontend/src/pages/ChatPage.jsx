@@ -171,7 +171,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
         {isAdmin && (
           <button
-            onClick={() => freezeRoom(roomId, !frozen).catch(() => {})}
+            onClick={() => freezeRoom(roomId, !frozen).catch((e) => console.error('freeze failed', e))}
             title={frozen ? '채팅 재개' : '채팅 얼리기'}
             className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-colors ${
               frozen

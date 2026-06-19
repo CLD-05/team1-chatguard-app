@@ -1,5 +1,6 @@
 package com.chatguard.domain.admin.service;
 
+import com.chatguard.domain.room.repository.RoomRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ class RoomFreezeServiceTest {
 
     private StringRedisTemplate redisTemplate;
     private ValueOperations<String, String> valueOps;
+    private RoomRepository roomRepository;
     private RoomFreezeService roomFreezeService;
 
     @BeforeEach
@@ -22,8 +24,10 @@ class RoomFreezeServiceTest {
         redisTemplate = mock(StringRedisTemplate.class);
         valueOps = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        roomRepository = mock(RoomRepository.class);
+        when(roomRepository.existsById(any())).thenReturn(true);
 
-        roomFreezeService = new RoomFreezeService(redisTemplate, new ObjectMapper());
+        roomFreezeService = new RoomFreezeService(redisTemplate, new ObjectMapper(), roomRepository);
         ReflectionTestUtils.setField(roomFreezeService, "roomChannelPrefix", "room:");
     }
 
