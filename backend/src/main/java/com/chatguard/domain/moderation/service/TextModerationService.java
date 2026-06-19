@@ -20,21 +20,20 @@ import lombok.extern.slf4j.Slf4j;
 public class TextModerationService {
 
     private final BannedWordRepository bannedWordRepository;
-    private final Set<String> bannedKeywords = new ConcurrentHashMap<>().newKeySet();
+    private volatile Set<String> bannedKeywords = ConcurrentHashMap.newKeySet();
 
     @PostConstruct
     public void refreshCache() {
         log.info("Refreshing banned words cache from DB...");
         try {
             List<BannedWord> words = bannedWordRepository.findAll();
-            Set<String> newKeywords = new HashSet<>();
+            Set<String> nextKeywords = ConcurrentHashMap.newKeySet();
             for (BannedWord bw : words) {
                 if (bw.getWord() != null && !bw.getWord().isBlank()) {
-                    newKeywords.add(bw.getWord().toLowerCase().trim());
+                    nextKeywords.add(bw.getWord().toLowerCase().trim());
                 }
             }
-            bannedKeywords.clear();
-            bannedKeywords.addAll(newKeywords);
+            this.bannedKeywords = nextKeywords;
             log.info("Banned words cache refreshed. Total unique words loaded: {}", bannedKeywords.size());
         } catch (Exception e) {
             log.error("Failed to refresh banned words cache", e);

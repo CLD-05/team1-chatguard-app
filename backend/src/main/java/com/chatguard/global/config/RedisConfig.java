@@ -24,7 +24,8 @@ public class RedisConfig {
             RedisConnectionFactory connectionFactory,
             RedisMessageSubscriber subscriber,
             BannedWordsMessageListener bannedWordsMessageListener,
-            @Value("${ROOM_CHANNEL_PREFIX:room:}") String roomChannelPrefix) {
+            @Value("${ROOM_CHANNEL_PREFIX:room:}") String roomChannelPrefix,
+            @Value("${CONFIG_CHANNEL_PREFIX:config:}") String configChannelPrefix) {
 
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
@@ -32,7 +33,7 @@ public class RedisConfig {
         container.addMessageListener(subscriber, new PatternTopic(roomChannelPrefix + "*"));
         
         // config:banned-words 전역 무효화 채널 리스너 추가
-        container.addMessageListener(bannedWordsMessageListener, new ChannelTopic("config:banned-words"));
+        container.addMessageListener(bannedWordsMessageListener, new ChannelTopic(configChannelPrefix + "banned-words"));
         return container;
     }
 }

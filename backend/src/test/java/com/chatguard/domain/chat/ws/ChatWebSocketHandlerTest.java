@@ -15,16 +15,13 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import com.chatguard.domain.chat.service.ChatService;
-import com.chatguard.domain.moderation.service.TextModerationService;
-import com.chatguard.domain.moderation.service.ModerationLogService;
+import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ChatWebSocketHandlerTest {
 
     private ChatService chatService;
     private ChatRoomSessionRegistry registry;
-    private TextModerationService textModerationService;
-    private ModerationLogService moderationLogService;
     private ObjectMapper objectMapper;
     private ChatWebSocketHandler handler;
 
@@ -32,21 +29,17 @@ class ChatWebSocketHandlerTest {
     void setUp() {
         chatService = mock(ChatService.class);
         registry = mock(ChatRoomSessionRegistry.class);
-        textModerationService = mock(TextModerationService.class);
-        moderationLogService = mock(ModerationLogService.class);
         objectMapper = new ObjectMapper();
         
         handler = new ChatWebSocketHandler(
             chatService,
             registry,
-            objectMapper,
-            textModerationService,
-            moderationLogService
+            objectMapper
         );
     }
 
     @Test
-    void 금칙어_메시지가_들어오면_선제_차단하고_에러프레임을_보내며_chatService는_호출하지_않는다() throws Exception {
+    void 금칙어_메시지가_들어오면_서비스단에서_차단되고_에러프레임을_보내며_세션은_유지한다() throws Exception {
         // Given
         WebSocketSession session = mock(WebSocketSession.class);
         Map<String, Object> attributes = new HashMap<>();
@@ -59,19 +52,16 @@ class ChatWebSocketHandlerTest {
         String payload = "{\"type\":\"chat.send\",\"payload\":{\"room_id\":1,\"content\":\"이것은 시발 메시지\"}}";
         TextMessage textMessage = new TextMessage(payload);
 
-        // 검열 모킹
-        when(textModerationService.judge("이것은 시발 메시지")).thenReturn(true);
+        // 서비스 검열 차단 결과 모킹
+        when(chatService.sendMessage(eq(100L), eq("UserA"), any())).thenReturn(SendMessageResult.BLOCKED_KEYWORD);
 
         // When
         handler.handleTextMessage(session, textMessage);
 
-        // Then: 1) chatService.sendMessage는 절대로 호출되지 않음 (Drop)
-        verify(chatService, never()).sendMessage(any(), any(), any());
+        // Then: 1) chatService.sendMessage가 1회 실행됨
+        verify(chatService, times(1)).sendMessage(eq(100L), eq("UserA"), any());
 
-        // Then: 2) moderationLogService.saveInNewTransaction가 1회 실행되어 차단 로그가 남음
-        verify(moderationLogService, times(1)).saveInNewTransaction(any());
-
-        // Then: 3) 사용자 세션에 MESSAGE_BLOCKED 에러 프레임이 실시간 전송됨
+        // Then: 2) 사용자 세션에 MESSAGE_BLOCKED 에러 프레임이 실시간 전송됨
         ArgumentCaptor<TextMessage> textMessageCaptor = ArgumentCaptor.forClass(TextMessage.class);
         verify(session, times(1)).sendMessage(textMessageCaptor.capture());
         
@@ -81,12 +71,12 @@ class ChatWebSocketHandlerTest {
             .contains("\"code\":\"MESSAGE_BLOCKED\"")
             .contains("\"message\":\"금칙어가 포함되어 있습니다.\"");
             
-        // Then: 4) 웹소켓 세션 close()는 호출되지 않아 연결이 유지됨
+        // Then: 3) 웹소켓 세션 close()는 호출되지 않아 연결이 유지됨
         verify(session, never()).close();
     }
 
     @Test
-    void 정상_메시지인_경우_검열을_통과하고_chatService로_위임된다() throws Exception {
+    void 정상_메시지인_경우_검열을_통과하고_정상적으로_송신처리된다() throws Exception {
         // Given
         WebSocketSession session = mock(WebSocketSession.class);
         Map<String, Object> attributes = new HashMap<>();
@@ -98,7 +88,7 @@ class ChatWebSocketHandlerTest {
         String payload = "{\"type\":\"chat.send\",\"payload\":{\"room_id\":1,\"content\":\"안녕하세요 정상 메시지\"}}";
         TextMessage textMessage = new TextMessage(payload);
 
-        when(textModerationService.judge("안녕하세요 정상 메시지")).thenReturn(false);
+        when(chatService.sendMessage(eq(100L), eq("UserA"), any())).thenReturn(SendMessageResult.SENT);
 
         // When
         handler.handleTextMessage(session, textMessage);
@@ -106,10 +96,7 @@ class ChatWebSocketHandlerTest {
         // Then: 1) chatService.sendMessage가 정상적으로 위임 호출됨
         verify(chatService, times(1)).sendMessage(eq(100L), eq("UserA"), any());
         
-        // Then: 2) moderationLogService는 호출되지 않음
-        verify(moderationLogService, never()).saveInNewTransaction(any());
-        
-        // Then: 3) 세션 오류 응답이 전송되지 않음
+        // Then: 2) 세션 오류 응답이 전송되지 않음
         verify(session, never()).sendMessage(any());
     }
 }
