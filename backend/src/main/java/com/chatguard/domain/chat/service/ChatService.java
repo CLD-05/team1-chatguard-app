@@ -76,7 +76,7 @@ public class ChatService {
         String content = normalizeContent(dto.content());
 
         Room room = roomRepository.findById(roomId)
-            .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
         User user = entityManager.getReference(User.class, userId);
 
         String messageId = UlidGenerator.generate();
@@ -85,27 +85,27 @@ public class ChatService {
 
         if (isBlocked) {
             moderationLogService.saveInNewTransaction(ModerationLog.builder()
-                .messageId(messageId)
-                .stage(Stage.KEYWORD)
-                .verdict(Verdict.BLOCK)
-                .content(content)
-                .checkedAt(nowUtc())
-                .build());
-            
+                    .messageId(messageId)
+                    .stage(Stage.KEYWORD)
+                    .verdict(Verdict.BLOCK)
+                    .content(content)
+                    .checkedAt(nowUtc())
+                    .build());
+
             meterRegistry.counter("chat_messages_total", "result", "blocked_keyword").increment();
             return SendMessageResult.BLOCKED_KEYWORD;
         }
 
         Message saved = messageRepository.save(Message.builder()
-            .id(messageId)
-            .room(room)
-            .user(user)
-            .content(content)
-            .createdAt(nowUtc())
-            .build());
+                .id(messageId)
+                .room(room)
+                .user(user)
+                .content(content)
+                .createdAt(nowUtc())
+                .build());
 
         moderationQueueProducer.enqueue(saved.getId(), roomId, saved.getContent());
-        
+
         meterRegistry.counter("chat_messages_total", "result", "passed").increment();
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -116,7 +116,7 @@ public class ChatService {
                 sample.stop(meterRegistry.timer("chat_broadcast_latency_seconds"));
             }
         });
-        
+
         return SendMessageResult.SENT;
     }
 
@@ -126,13 +126,12 @@ public class ChatService {
         }
         PageRequest page = PageRequest.of(0, Math.max(1, Math.min(limit, 50)));
         List<Message> messages = new ArrayList<>(beforeId != null && !beforeId.isBlank()
-            ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(
-                roomId,
-                beforeId,
-                MessageStatus.DELETED,
-                page
-            )
-            : messageRepository.findByRoomIdAndStatusNotOrderByIdDesc(roomId, MessageStatus.DELETED, page));
+                ? messageRepository.findByRoomIdAndIdLessThanAndStatusNotOrderByIdDesc(
+                        roomId,
+                        beforeId,
+                        MessageStatus.DELETED,
+                        page)
+                : messageRepository.findByRoomIdAndStatusNotOrderByIdDesc(roomId, MessageStatus.DELETED, page));
 
         Collections.reverse(messages);
         return messages.stream().map(MessageDto::from).toList();
