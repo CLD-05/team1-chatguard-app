@@ -24,7 +24,8 @@ export default function LogsTab({ guard }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
-    guard(getLogs({ stage: stage || 'all', before, limit: LIMIT }))
+    const verdict = stage ? 'BLOCK' : undefined
+    guard(getLogs({ stage: stage || 'all', verdict, before, limit: LIMIT }))
       .then((data) => setLogs(data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -53,31 +54,36 @@ export default function LogsTab({ guard }) {
           className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500"
         >
           <option value="">전체</option>
-          <option value="KEYWORD">키워드</option>
-          <option value="AI">AI</option>
+          <option value="KEYWORD">키워드 (차단만)</option>
+          <option value="AI">AI (차단만)</option>
         </select>
       </div>
 
       {loading ? <Spinner /> : (
         <>
           <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-800 z-10">
-                <tr className="border-b border-gray-700 text-left">
-                  <th className="px-5 py-3 text-xs text-gray-500 font-normal">메시지</th>
-                  <th className="px-4 py-3 text-xs text-gray-500 font-normal">단계</th>
-                  <th className="px-4 py-3 text-xs text-gray-500 font-normal">판정</th>
-                  <th className="px-4 py-3 text-xs text-gray-500 font-normal">점수</th>
-                  <th className="px-5 py-3 text-xs text-gray-500 font-normal">시각</th>
-                </tr>
-              </thead>
-            </table>
             <div className="overflow-y-auto max-h-[calc(100vh-260px)]">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
+                <colgroup>
+                  <col className="w-[38%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[24%]" />
+                </colgroup>
+                <thead className="sticky top-0 bg-gray-800 z-10">
+                  <tr className="border-b border-gray-700 text-left">
+                    <th className="px-5 py-3 text-xs text-gray-500 font-normal">메시지</th>
+                    <th className="px-4 py-3 text-xs text-gray-500 font-normal">단계</th>
+                    <th className="px-4 py-3 text-xs text-gray-500 font-normal">판정</th>
+                    <th className="px-4 py-3 text-xs text-gray-500 font-normal">점수</th>
+                    <th className="px-5 py-3 text-xs text-gray-500 font-normal">시각</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {logs.map((log, i) => (
                     <tr key={log.id} className={i !== logs.length - 1 ? 'border-b border-gray-700/60' : ''}>
-                      <td className="px-5 py-3 text-gray-300 max-w-[160px] truncate">{log.content ?? '—'}</td>
+                      <td className="px-5 py-3 text-gray-300 truncate overflow-hidden">{log.content ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{STAGE_LABEL[log.stage] ?? log.stage}</td>
                       <td className={`px-4 py-3 text-xs font-medium ${VERDICT_COLOR[log.verdict] ?? 'text-gray-400'}`}>{log.verdict}</td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{log.score != null ? log.score.toFixed(2) : '—'}</td>

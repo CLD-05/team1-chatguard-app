@@ -12,7 +12,7 @@ export default function DashboardTab({ guard }) {
 
   useEffect(() => {
     guard(getStats()).then(setStats).catch(() => {})
-    guard(getLogs({ limit: 10 }))
+    guard(getLogs({ verdict: 'BLOCK', limit: 5 }))
       .then((res) => setRecentLogs(res ?? []))
       .catch(() => {})
   }, [guard])
@@ -45,7 +45,12 @@ export default function DashboardTab({ guard }) {
       <div>
         <p className="text-sm font-medium text-gray-300 mb-3">최근 검열 내역</p>
         <div className="bg-gray-800/60 border border-gray-700/50 rounded-xl overflow-hidden">
-          <table className="w-full">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[55%]" />
+              <col className="w-[20%]" />
+              <col className="w-[25%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-gray-700/60">
                 <th className="px-5 py-3 text-left text-xs text-gray-600 font-medium">메시지</th>
