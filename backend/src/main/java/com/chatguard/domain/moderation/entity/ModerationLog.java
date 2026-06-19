@@ -20,7 +20,7 @@ public class ModerationLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "message_id", length = 26, nullable = false)
+    @Column(name = "message_id", columnDefinition = "CHAR(26)", nullable = false)
     private String messageId;
 
     @Enumerated(EnumType.STRING)
