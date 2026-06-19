@@ -2,7 +2,11 @@ package com.chatguard.domain.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.chatguard.domain.admin.service.RoomFreezeService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,6 +59,8 @@ class ChatServiceHistoryTest {
 
     @BeforeEach
     void setUp() {
+        RoomFreezeService roomFreezeService = mock(RoomFreezeService.class);
+        when(roomFreezeService.isFrozen(any())).thenReturn(false);
         chatService = new ChatService(
             messageRepository,
             mock(ModerationLogService.class),
@@ -64,7 +70,8 @@ class ChatServiceHistoryTest {
             mock(StringRedisTemplate.class),
             new ObjectMapper(),
             mock(EntityManager.class),
-            mock(MeterRegistry.class)
+            mock(MeterRegistry.class),
+            roomFreezeService
         );
         room = roomRepository.save(Room.builder().name("room").streamerName("s").build());
         user = userRepository.save(User.builder().username("u").password("p").displayName("U").build());

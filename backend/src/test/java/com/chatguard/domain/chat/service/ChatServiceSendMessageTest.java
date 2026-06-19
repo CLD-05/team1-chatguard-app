@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.moderation.entity.ModerationLog;
 import com.chatguard.domain.moderation.entity.Stage;
@@ -38,6 +39,7 @@ class ChatServiceSendMessageTest {
     private TextModerationService textModerationService;
     private RoomRepository roomRepository;
     private ModerationQueueProducer moderationQueueProducer;
+    private RoomFreezeService roomFreezeService;
     private ChatService chatService;
 
     @BeforeEach
@@ -47,6 +49,7 @@ class ChatServiceSendMessageTest {
         textModerationService = mock(TextModerationService.class);
         roomRepository = mock(RoomRepository.class);
         moderationQueueProducer = mock(ModerationQueueProducer.class);
+        roomFreezeService = mock(RoomFreezeService.class);
 
         chatService = new ChatService(
             messageRepository,
@@ -57,12 +60,13 @@ class ChatServiceSendMessageTest {
             mock(StringRedisTemplate.class),
             new ObjectMapper(),
             mock(EntityManager.class),
-            mock(MeterRegistry.class, RETURNS_DEEP_STUBS)
+            mock(MeterRegistry.class, RETURNS_DEEP_STUBS),
+            roomFreezeService
         );
 
         when(roomRepository.findById(1L)).thenReturn(Optional.of(mock(Room.class)));
-        // 기본값은 PASS로 설정
         when(textModerationService.judge(any())).thenReturn(Verdict.PASS);
+        when(roomFreezeService.isFrozen(any())).thenReturn(false);
     }
 
     @Test
@@ -88,5 +92,19 @@ class ChatServiceSendMessageTest {
         // 차단 시 messages 미저장 + 큐 미적재(D30)
         verify(messageRepository, never()).save(any());
         verify(moderationQueueProducer, never()).enqueue(any(), any(), any());
+    }
+
+    @Test
+    void freeze_상태에서_메시지_전송시_BLOCKED_FROZEN을_반환하고_DB와_큐를_건드리지_않는다() {
+        // D45: frozen이면 저장·큐·전파 없이 BLOCKED_FROZEN 반환
+        when(roomFreezeService.isFrozen(1L)).thenReturn(true);
+
+        SendMessageResult result = chatService.sendMessage(7L, "viewer7",
+            new ChatSendDto(1L, "안녕하세요"));
+
+        assertThat(result).isEqualTo(SendMessageResult.BLOCKED_FROZEN);
+        verify(messageRepository, never()).save(any());
+        verify(moderationQueueProducer, never()).enqueue(any(), any(), any());
+        verify(moderationLogService, never()).saveInNewTransaction(any());
     }
 }
