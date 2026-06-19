@@ -52,8 +52,4 @@ management:
       percentiles-histogram:
         chat_broadcast_latency_seconds: true
 
-# 금칙어 외부 주입 규격 추가
-# 시스템 환경 변수 BANNED_KEYWORDS가 있으면 사용하고, 없으면 기본값(badword) 사용
-moderation:
-  banned-keywords: ${BANNED_KEYWORDS:badword}
 
