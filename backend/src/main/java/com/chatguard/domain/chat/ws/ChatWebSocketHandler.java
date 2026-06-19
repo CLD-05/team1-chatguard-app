@@ -11,6 +11,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.service.ChatService;
+import com.chatguard.domain.chat.service.RoomPresenceService;
 import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
 import com.chatguard.global.error.CustomException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,19 +29,33 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatRoomSessionRegistry registry;
     private final ObjectMapper objectMapper;
     private final RoomFreezeService roomFreezeService;
+    private final RoomPresenceService roomPresenceService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long roomId = getRoomId(session);
         if (roomId != null) {
+            Long userId = getUserId(session);
+            String displayName = getDisplayName(session);
             registry.register(roomId, session);
-            log.info("WS connected: session={} roomId={} userId={}", session.getId(), roomId, getUserId(session));
+            log.info("WS connected: session={} roomId={} userId={}", session.getId(), roomId, userId);
+
             // 신규 접속자에게 현재 freeze 상태 1회 전송 (D45)
             boolean frozen = roomFreezeService.isFrozen(roomId);
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
                 "type", "room.freeze",
                 "payload", Map.of("room_id", roomId, "frozen", frozen)
             ))));
+
+            // D44: presence join — Redis Hash 갱신 + presence.update publish (전 파드 클라이언트에 전파)
+            // A-3: 신규 접속자에게 현재 presence 스냅샷 1회 직접 전송
+            if (userId != null && displayName != null) {
+                roomPresenceService.join(roomId, userId, displayName);
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                    "type", "presence.update",
+                    "payload", roomPresenceService.getSnapshot(roomId)
+                ))));
+            }
         }
     }
 
@@ -88,8 +103,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         Long roomId = getRoomId(session);
+        Long userId = getUserId(session);
         if (roomId != null) {
             registry.unregister(roomId, session);
+            // D44: presence leave — join()과 동일 조건으로 가드 (비대칭 삭제 방지)
+            String displayName = getDisplayName(session);
+            if (userId != null && displayName != null) {
+                roomPresenceService.leave(roomId, userId);
+            }
         }
         log.info("WS disconnected: session={} status={}", session.getId(), status);
     }

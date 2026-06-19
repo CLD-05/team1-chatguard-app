@@ -6,9 +6,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,6 +86,10 @@ class ModerationIntegrationTest {
         ValueOperations<String, String> valueOps = mock(ValueOperations.class);
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
         when(valueOps.get(any())).thenReturn(null); // 기본값: freeze 없음
+
+        HashOperations<String, Object, Object> hashOps = mock(HashOperations.class);
+        when(stringRedisTemplate.opsForHash()).thenReturn(hashOps);
+        when(hashOps.entries(any())).thenReturn(Map.of());
 
         // 테스트 격리: 기존 데이터가 있으면 테스트 결과에 영향을 주므로 삭제
         messageRepository.deleteAll();
