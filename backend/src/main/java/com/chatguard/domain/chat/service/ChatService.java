@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.chatguard.domain.chat.dto.ChatMessageDto;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.dto.MessageDto;
@@ -56,6 +57,7 @@ public class ChatService {
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
     private final MeterRegistry meterRegistry;
+    private final RoomFreezeService roomFreezeService;
 
     @Value("${ROOM_CHANNEL_PREFIX:room:}")
     private String roomChannelPrefix = "room:";
@@ -66,6 +68,11 @@ public class ChatService {
         Timer.Sample sample = Timer.start(meterRegistry);
 
         Long roomId = required(dto.roomId(), "room_id");
+
+        if (roomFreezeService.isFrozen(roomId)) {
+            return SendMessageResult.BLOCKED_FROZEN;
+        }
+
         String content = normalizeContent(dto.content());
 
         Room room = roomRepository.findById(roomId)
@@ -171,6 +178,7 @@ public class ChatService {
 
     public enum SendMessageResult {
         SENT,
-        BLOCKED_KEYWORD
+        BLOCKED_KEYWORD,
+        BLOCKED_FROZEN
     }
 }

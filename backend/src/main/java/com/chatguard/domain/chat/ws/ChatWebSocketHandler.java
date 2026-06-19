@@ -8,6 +8,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.service.ChatService;
 import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
@@ -26,13 +27,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatService chatService;
     private final ChatRoomSessionRegistry registry;
     private final ObjectMapper objectMapper;
+    private final RoomFreezeService roomFreezeService;
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long roomId = getRoomId(session);
         if (roomId != null) {
             registry.register(roomId, session);
             log.info("WS connected: session={} roomId={} userId={}", session.getId(), roomId, getUserId(session));
+            // 신규 접속자에게 현재 freeze 상태 1회 전송 (D45)
+            boolean frozen = roomFreezeService.isFrozen(roomId);
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                "type", "room.freeze",
+                "payload", Map.of("room_id", roomId, "frozen", frozen)
+            ))));
         }
     }
 
@@ -62,6 +70,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 SendMessageResult result = chatService.sendMessage(userId, displayName, dto);
                 if (result == SendMessageResult.BLOCKED_KEYWORD) {
                     sendError(session, "MESSAGE_BLOCKED", "금칙어가 포함되어 있습니다.");
+                } else if (result == SendMessageResult.BLOCKED_FROZEN) {
+                    sendError(session, "CHAT_FROZEN", "채팅이 일시중지 상태입니다.");
                 }
             } catch (IllegalArgumentException e) {
                 sendError(session, "INVALID_PAYLOAD", e.getMessage());

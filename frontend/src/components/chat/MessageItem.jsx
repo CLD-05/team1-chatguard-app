@@ -19,13 +19,8 @@ export default memo(function MessageItem({ message, isOwn }) {
   const color = isOwn ? 'text-indigo-400' : nameColor(message.display_name)
 
   return (
-    <div data-testid={`msg-${message.id}`} className="px-3 py-0.5 hover:bg-white/5 rounded transition-colors group">
-      <p className="text-sm leading-relaxed break-words">
-        <span className="text-gray-600 text-xs mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity select-none">
-          {new Date(message.created_at).toLocaleTimeString('ko-KR', {
-            hour: '2-digit', minute: '2-digit',
-          })}
-        </span>
+    <div data-testid={`msg-${message.id}`} className="px-3 py-0.5 hover:bg-white/5 rounded transition-colors group flex items-baseline gap-2">
+      <p className="text-sm leading-relaxed break-words flex-1 min-w-0">
         <span className={`font-bold mr-1 ${color}`}>{message.display_name}</span>
         <span className="text-gray-500 mr-1 select-none">:</span>
         {isBlurred ? (
@@ -39,6 +34,11 @@ export default memo(function MessageItem({ message, isOwn }) {
           <span className="text-gray-100">{message.content}</span>
         )}
       </p>
+      <span className="text-gray-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity select-none shrink-0">
+        {new Date(message.created_at).toLocaleTimeString('ko-KR', {
+          hour: '2-digit', minute: '2-digit',
+        })}
+      </span>
     </div>
   )
 })
