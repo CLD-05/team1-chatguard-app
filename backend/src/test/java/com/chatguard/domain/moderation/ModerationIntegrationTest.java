@@ -64,6 +64,12 @@ class ModerationIntegrationTest {
     @Autowired
     private ModerationLogService moderationLogService;
 
+    @Autowired
+    private com.chatguard.domain.moderation.repository.BannedWordRepository bannedWordRepository;
+
+    @Autowired
+    private com.chatguard.domain.moderation.service.TextModerationService textModerationService;
+
     @MockBean
     private RedisConnectionFactory redisConnectionFactory;
 
@@ -96,6 +102,11 @@ class ModerationIntegrationTest {
         moderationLogRepository.deleteAll();
         roomRepository.deleteAll();
         userRepository.deleteAll();
+        bannedWordRepository.deleteAll();
+
+        bannedWordRepository.save(com.chatguard.domain.moderation.entity.BannedWord.builder().word("badword").build());
+        bannedWordRepository.save(com.chatguard.domain.moderation.entity.BannedWord.builder().word("욕설").build());
+        textModerationService.refreshCache();
 
         Room room = roomRepository.save(Room.builder().name("Test Room").streamerName("Streamer").build());
         User user = userRepository.save(User.builder()

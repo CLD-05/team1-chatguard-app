@@ -81,6 +81,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
+            String content = dto.content();
+            if (content == null || content.trim().isEmpty()) {
+                sendError(session, "INVALID_PAYLOAD", "content is required");
+                return;
+            }
+            String normalizedContent = content.trim();
+            if (normalizedContent.length() > 500) {
+                sendError(session, "INVALID_PAYLOAD", "content must be 500 characters or less");
+                return;
+            }
+
             try {
                 SendMessageResult result = chatService.sendMessage(userId, displayName, dto);
                 if (result == SendMessageResult.BLOCKED_KEYWORD) {

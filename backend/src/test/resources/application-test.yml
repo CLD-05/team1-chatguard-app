@@ -31,5 +31,4 @@ jwt:
   secret: dummy-secret-key-for-testing-purposes-only-1234
   expiration: 86400000
 
-moderation:
-  banned-keywords: badword,욕설,금칙어
+
