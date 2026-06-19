@@ -3,6 +3,7 @@ package com.chatguard.domain.admin.service;
 import com.chatguard.domain.room.repository.RoomRepository;
 import com.chatguard.global.error.CustomException;
 import com.chatguard.global.error.ErrorCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
