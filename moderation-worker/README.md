@@ -53,14 +53,14 @@ Windows(PowerShell):
 
 ```powershell
 cd moderation-worker
-.\run-unsmile.ps1
+.\run-model.ps1
 ```
 
 macOS / Linux(bash):
 
 ```bash
 cd moderation-worker
-./run-unsmile.sh
+./run-model.sh
 ```
 
 각 스크립트는 다음을 자동 처리한다.
@@ -91,7 +91,8 @@ python3.11 -m venv .venv
 export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL_PREFIX=room: \
   DB_URL="jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
   DB_USER=root DB_PASSWORD=chatguard1234 \
-  MODERATOR_MODE=unsmile MODEL_VERSION=unsmile-v1 BLOCK_THRESHOLD=0.70 TOKENIZERS_PARALLELISM=false
+  MODERATOR_MODE=real UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile MODEL_VERSION=unsmile-v1 \
+  BLUR_THRESHOLD=0.40 CLEAN_PENALTY=0.05 TOKENIZERS_PARALLELISM=false
 .venv/bin/python worker.py
 ```
 
@@ -107,10 +108,11 @@ DB_URL=jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC
 DB_USER=root
 DB_PASSWORD=backend/.env 값 사용
 
-MODERATOR_MODE=unsmile
+MODERATOR_MODE=real
 UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
 MODEL_VERSION=unsmile-v1
-BLOCK_THRESHOLD=0.70
+BLUR_THRESHOLD=0.40
+CLEAN_PENALTY=0.05
 METRICS_PORT=8000
 ```
 
@@ -121,13 +123,13 @@ Windows(PowerShell):
 ```powershell
 $env:DB_URL="jdbc:mysql://localhost:3307/chatguard_dev"
 $env:REDIS_HOST="localhost"
-.\run-unsmile.ps1
+.\run-model.ps1
 ```
 
 macOS / Linux(bash):
 
 ```bash
-DB_URL="jdbc:mysql://localhost:3307/chatguard_dev" REDIS_HOST="localhost" ./run-unsmile.sh
+DB_URL="jdbc:mysql://localhost:3307/chatguard_dev" REDIS_HOST="localhost" ./run-model.sh
 ```
 
 ## Metrics 확인
@@ -213,10 +215,10 @@ PowerShell 실행 정책 때문에 스크립트 실행이 막히는 경우(Windo
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-`./run-unsmile.sh: Permission denied`가 나는 경우(macOS / Linux):
+`./run-model.sh: Permission denied`가 나는 경우(macOS / Linux):
 
 ```bash
-chmod +x run-unsmile.sh
+chmod +x run-model.sh
 ```
 
 `'cryptography' package is required for ... auth methods` 오류가 나는 경우:
