@@ -1,15 +1,33 @@
-# base가 DB_USER/DB_PASSWORD를 폴백 없이 요구하므로(fail-fast),
-# 테스트 프로파일은 자체 자격증명을 제공한다(테스트 MySQL = root·빈 비밀번호).
 spring:
   datasource:
-    username: ${DB_USER:root}
-    password: ${DB_PASSWORD:}
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
   sql:
     init:
       mode: never
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+    defer-datasource-initialization: true
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+
+management:
+  health:
+    redis:
+      enabled: false
 
 jwt:
-  # 테스트 통과용 가짜 비밀키 (아무 의미 없는 32바이트 이상 문자열)
   secret: dummy-secret-key-for-testing-purposes-only-1234
   expiration: 86400000
 

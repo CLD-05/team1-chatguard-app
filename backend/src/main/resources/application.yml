@@ -4,11 +4,8 @@ server:
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
-  # 로컬: .env를 properties로 읽어 ${DB_PASSWORD} 등을 단일 소스로 해석한다.
-  # optional이라 .env가 없는 운영/CI에서는 무시되고 실제 환경변수/Secret이 쓰인다.
   config:
     import: optional:file:./.env[.properties]
-  # MySQL
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useUnicode=true}
@@ -18,16 +15,9 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
 
-  sql:
-    init:
-      mode: always
-      encoding: UTF-8
-
-  # JPA (Hibernate) 설정
   jpa:
     hibernate:
-      ddl-auto: update
-    defer-datasource-initialization: true
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:

@@ -1,6 +1,9 @@
 package com.chatguard.domain.moderation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
@@ -8,7 +11,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,11 +59,25 @@ class ModerationIntegrationTest {
     @Autowired
     private ModerationLogService moderationLogService;
 
+    @MockBean
+    private RedisConnectionFactory redisConnectionFactory;
+
+    @MockBean
+    private StringRedisTemplate stringRedisTemplate;
+
+    @MockBean
+    private RedisMessageListenerContainer redisMessageListenerContainer;
+
     private Long roomId;
     private Long userId;
 
     @BeforeEach
     void setUp() {
+        // Mock Redis behavior
+        ListOperations<String, String> listOps = mock(ListOperations.class);
+        when(stringRedisTemplate.opsForList()).thenReturn(listOps);
+        when(listOps.leftPush(anyString(), anyString())).thenReturn(1L);
+
         // 테스트 격리: 기존 데이터가 있으면 테스트 결과에 영향을 주므로 삭제
         messageRepository.deleteAll();
         moderationLogRepository.deleteAll();
