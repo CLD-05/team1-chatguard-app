@@ -16,6 +16,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import com.chatguard.domain.chat.service.ChatService;
 import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
+import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ChatWebSocketHandlerTest {
@@ -23,6 +24,7 @@ class ChatWebSocketHandlerTest {
     private ChatService chatService;
     private ChatRoomSessionRegistry registry;
     private ObjectMapper objectMapper;
+    private RoomFreezeService roomFreezeService;
     private ChatWebSocketHandler handler;
 
     @BeforeEach
@@ -30,11 +32,13 @@ class ChatWebSocketHandlerTest {
         chatService = mock(ChatService.class);
         registry = mock(ChatRoomSessionRegistry.class);
         objectMapper = new ObjectMapper();
+        roomFreezeService = mock(RoomFreezeService.class);
         
         handler = new ChatWebSocketHandler(
             chatService,
             registry,
-            objectMapper
+            objectMapper,
+            roomFreezeService
         );
     }
 
