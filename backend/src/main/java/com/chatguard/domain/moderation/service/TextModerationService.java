@@ -1,53 +1,54 @@
 package com.chatguard.domain.moderation.service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
+import jakarta.annotation.PostConstruct;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.chatguard.domain.moderation.entity.Verdict;
+import com.chatguard.domain.moderation.entity.BannedWord;
+import com.chatguard.domain.moderation.repository.BannedWordRepository;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TextModerationService {
 
-    @Value("${moderation.banned-keywords:badword}")
-    private List<String> bannedKeywords;
+    private final BannedWordRepository bannedWordRepository;
+    private volatile Set<String> bannedKeywords = ConcurrentHashMap.newKeySet();
 
-    public Verdict judge(String content) {
-        if (content == null || content.isBlank()) {
-            return Verdict.PASS;
+    @PostConstruct
+    public void refreshCache() {
+        log.info("Refreshing banned words cache from DB...");
+        try {
+            List<BannedWord> words = bannedWordRepository.findAll();
+            Set<String> nextKeywords = ConcurrentHashMap.newKeySet();
+            for (BannedWord bw : words) {
+                if (bw.getWord() != null && !bw.getWord().isBlank()) {
+                    nextKeywords.add(bw.getWord().toLowerCase().trim());
+                }
+            }
+            this.bannedKeywords = nextKeywords;
+            log.info("Banned words cache refreshed. Total unique words loaded: {}", bannedKeywords.size());
+        } catch (Exception e) {
+            log.error("Failed to refresh banned words cache", e);
         }
+    }
 
-        if (bannedKeywords == null || bannedKeywords.isEmpty()) {
-            return Verdict.PASS;
+    public boolean judge(String content) {
+        if (content == null || content.isBlank()) {
+            return false;
         }
 
         String lowerContent = content.toLowerCase();
         
-        boolean isBlocked = bannedKeywords.stream()
+        return bannedKeywords.stream()
                 .filter(word -> !word.isBlank())
-                .map(word -> {
-                    try {
-                        if (word.matches(".*[\\u00C0-\\u00FF].*")) {  
-                            return new String(word.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);     
-                        }
-                        return word;
-                    } catch (Exception e) {
-                        return word;
-                    }
-                })
                 .anyMatch(lowerContent::contains);
-
-
-        if (isBlocked) {
-            log.info("Message blocked by keyword moderation (External Config): {}", content);
-            return Verdict.BLOCK;
-        }
-
-        return Verdict.PASS;
     }
 }
