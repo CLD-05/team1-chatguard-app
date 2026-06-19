@@ -54,8 +54,8 @@ export default function LogsTab({ guard }) {
           className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500"
         >
           <option value="">전체</option>
-          <option value="KEYWORD">키워드</option>
-          <option value="AI">AI</option>
+          <option value="KEYWORD">키워드 (차단만)</option>
+          <option value="AI">AI (차단만)</option>
         </select>
       </div>
 

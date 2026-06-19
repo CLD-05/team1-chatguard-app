@@ -2,7 +2,7 @@ package com.chatguard.domain.admin.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public record ModerationLogResponse(
         Long id,
@@ -10,5 +10,5 @@ public record ModerationLogResponse(
         String verdict,
         Float score,
         String content,
-        @JsonProperty("checked_at") LocalDateTime checkedAt
+        @JsonProperty("checked_at") OffsetDateTime checkedAt
 ) {}

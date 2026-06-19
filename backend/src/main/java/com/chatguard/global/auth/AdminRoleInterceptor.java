@@ -13,14 +13,11 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.nio.charset.StandardCharsets;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class AdminRoleInterceptor implements HandlerInterceptor {
 
-    private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -29,12 +26,7 @@ public class AdminRoleInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) {
-            return forbidden(response);
-        }
-
-        Claims claims = jwtProvider.getClaimsIfValid(header.substring(7));
+        Claims claims = (Claims) request.getAttribute("jwtClaims");
         if (claims == null || !"ADMIN".equals(claims.get("role", String.class))) {
             return forbidden(response);
         }
@@ -45,7 +37,7 @@ public class AdminRoleInterceptor implements HandlerInterceptor {
     private boolean forbidden(HttpServletResponse response) {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setCharacterEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
         try {
             String body = objectMapper.writeValueAsString(
                     ErrorResponse.of(ErrorCode.FORBIDDEN.name(), ErrorCode.FORBIDDEN.getMessage()));

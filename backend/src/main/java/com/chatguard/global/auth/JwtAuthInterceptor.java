@@ -48,6 +48,7 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
         // 4. 통과! AuthContext에 담아줍니다.
         AuthContext.setUserId(Long.parseLong(claims.getSubject()));
+        request.setAttribute("jwtClaims", claims);
         return true;
     }
 

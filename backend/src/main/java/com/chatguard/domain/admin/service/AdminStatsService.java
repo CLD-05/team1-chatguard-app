@@ -8,12 +8,16 @@ import com.chatguard.domain.moderation.entity.ModerationLog;
 import com.chatguard.domain.moderation.entity.Stage;
 import com.chatguard.domain.moderation.entity.Verdict;
 import com.chatguard.domain.moderation.repository.ModerationLogRepository;
+import com.chatguard.global.error.CustomException;
+import com.chatguard.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,15 +33,26 @@ public class AdminStatsService {
     public AdminStatsResponse getStats() {
         long keywordBlocked = moderationLogRepository.countByStageAndVerdict(Stage.KEYWORD, Verdict.BLOCK);
         long aiBlurred = moderationLogRepository.countByStageAndVerdict(Stage.AI, Verdict.BLOCK);
-        long totalMessages = moderationLogRepository.count();
+        long totalMessages = messageRepository.count() + keywordBlocked;
         return new AdminStatsResponse(totalMessages, keywordBlocked, aiBlurred);
     }
 
     public List<ModerationLogResponse> getLogs(String stage, String verdict, Long before, int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
+        Pageable pageable = PageRequest.of(0, Math.min(limit, 200));
 
-        Stage stageEnum = (stage == null || "all".equalsIgnoreCase(stage)) ? null : Stage.valueOf(stage.toUpperCase());
-        Verdict verdictEnum = (verdict == null) ? null : Verdict.valueOf(verdict.toUpperCase());
+        Stage stageEnum;
+        try {
+            stageEnum = (stage == null || "all".equalsIgnoreCase(stage)) ? null : Stage.valueOf(stage.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Verdict verdictEnum;
+        try {
+            verdictEnum = (verdict == null) ? null : Verdict.valueOf(verdict.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
 
         List<ModerationLog> logs = moderationLogRepository.findWithFilters(stageEnum, verdictEnum, before, pageable);
 
@@ -59,7 +74,8 @@ public class AdminStatsService {
                             : messageContentMap.get(l.getMessageId());
                     return new ModerationLogResponse(
                             l.getId(), l.getStage().name(), l.getVerdict().name(),
-                            l.getScore(), content, l.getCheckedAt());
+                            l.getScore(), content,
+                            l.getCheckedAt().atOffset(ZoneOffset.UTC));
                 })
                 .collect(Collectors.toList());
     }
