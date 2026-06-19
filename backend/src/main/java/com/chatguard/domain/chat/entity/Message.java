@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 public class Message {
 
     @Id
-    @Column(length = 26, nullable = false)
+    @Column(columnDefinition = "CHAR(26)", nullable = false)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)

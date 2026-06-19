@@ -32,6 +32,6 @@ public class UserService {
         }
 
         String token = jwtProvider.generateToken(user.getId(), user.getDisplayName(), user.getRole().name());
-        return new UserLoginResponse(user.getId(), user.getDisplayName(), token);
+        return new UserLoginResponse(user.getId(), user.getDisplayName(), user.getRole().name(), token);
     }
 }
