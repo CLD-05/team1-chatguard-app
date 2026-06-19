@@ -1,6 +1,8 @@
 package com.chatguard.domain.chat.ws;
 
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -12,6 +14,12 @@ import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.chatguard.domain.chat.dto.ChatSendDto;
 import com.chatguard.domain.chat.service.ChatService;
 import com.chatguard.domain.chat.service.ChatService.SendMessageResult;
+import com.chatguard.domain.moderation.service.TextModerationService;
+import com.chatguard.domain.moderation.service.ModerationLogService;
+import com.chatguard.domain.moderation.entity.ModerationLog;
+import com.chatguard.domain.moderation.entity.Stage;
+import com.chatguard.domain.moderation.entity.Verdict;
+import com.chatguard.global.util.UlidGenerator;
 import com.chatguard.global.error.CustomException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +36,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatRoomSessionRegistry registry;
     private final ObjectMapper objectMapper;
     private final RoomFreezeService roomFreezeService;
+    private final TextModerationService textModerationService;
+    private final ModerationLogService moderationLogService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -63,6 +73,32 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
             if (!dto.roomId().equals(sessionRoomId)) {
                 sendError(session, "ROOM_MISMATCH", "연결된 채팅방과 메시지 채팅방이 다릅니다.");
+                return;
+            }
+
+            String content = dto.content();
+            if (content == null || content.trim().isEmpty()) {
+                sendError(session, "INVALID_PAYLOAD", "content is required");
+                return;
+            }
+            String normalizedContent = content.trim();
+            if (normalizedContent.length() > 500) {
+                sendError(session, "INVALID_PAYLOAD", "content must be 500 characters or less");
+                return;
+            }
+
+            // 1) WebSocket 단에서 금칙어 선제 검열 실행 및 차단 처리
+            if (textModerationService.judge(normalizedContent)) {
+                String messageId = UlidGenerator.generate();
+                moderationLogService.saveInNewTransaction(ModerationLog.builder()
+                        .messageId(messageId)
+                        .stage(Stage.KEYWORD)
+                        .verdict(Verdict.BLOCK)
+                        .content(normalizedContent)
+                        .checkedAt(LocalDateTime.now(ZoneOffset.UTC))
+                        .build());
+
+                sendError(session, "MESSAGE_BLOCKED", "금칙어가 포함되어 있습니다.");
                 return;
             }
 

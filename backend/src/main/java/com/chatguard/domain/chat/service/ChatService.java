@@ -81,9 +81,9 @@ public class ChatService {
 
         String messageId = UlidGenerator.generate();
 
-        Verdict verdict = textModerationService.judge(content);
+        boolean isBlocked = textModerationService.judge(content);
 
-        if (verdict == Verdict.BLOCK) {
+        if (isBlocked) {
             moderationLogService.saveInNewTransaction(ModerationLog.builder()
                 .messageId(messageId)
                 .stage(Stage.KEYWORD)

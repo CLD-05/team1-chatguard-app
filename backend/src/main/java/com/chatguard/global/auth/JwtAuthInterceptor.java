@@ -48,8 +48,14 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
         // 4. 통과! AuthContext에 담아줍니다.
         AuthContext.setUserId(Long.parseLong(claims.getSubject()));
+        AuthContext.setRole(claims.get("role", String.class));
         request.setAttribute("jwtClaims", claims);
         return true;
+    }
+
+    @Override
+    public void afterCompletion(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response, Object handler, Exception ex) {
+        AuthContext.clear();
     }
 
     // D29: 모든 4xx/5xx는 공통 에러 봉투 {error:{code,message}}를 반환한다.
