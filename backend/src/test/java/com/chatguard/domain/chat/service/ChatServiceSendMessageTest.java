@@ -65,14 +65,15 @@ class ChatServiceSendMessageTest {
         );
 
         when(roomRepository.findById(1L)).thenReturn(Optional.of(mock(Room.class)));
-        when(textModerationService.judge(any())).thenReturn(Verdict.PASS);
+        // 기본값은 PASS로 설정 (차단되지 않음 = false)
+        when(textModerationService.judge(any())).thenReturn(false);
         when(roomFreezeService.isFrozen(any())).thenReturn(false);
     }
 
     @Test
     void 키워드_차단시_moderation_log에_26자_ULID를_기록하고_메시지는_저장하지_않는다() {
         // P1-1: ULID는 키워드 검열 전에 1회 발급되어 차단 로그에 그대로 기록되어야 한다(별도 발급 금지).
-        when(textModerationService.judge(any())).thenReturn(Verdict.BLOCK);
+        when(textModerationService.judge(any())).thenReturn(true);
         
         SendMessageResult result = chatService.sendMessage(7L, "viewer7",
             new ChatSendDto(1L, "이건 금칙어 포함 메시지"));
