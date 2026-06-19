@@ -2,7 +2,9 @@ package com.chatguard.domain.chat.ws;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
@@ -54,6 +56,33 @@ public class ChatRoomSessionRegistry {
                     log.warn("Failed to send message to session={}", session.getId(), e);
                 }
             }
+        }
+    }
+
+    /**
+     * D47: 서버측 ping heartbeat. 30초마다 열린 모든 WS 세션에 ping 프레임을 보내
+     * ALB·NAT 등 중간 장비의 idle 타임아웃으로 끊기는 것을 막고 좀비 세션을 감지한다.
+     * 브라우저가 자동으로 pong하므로 클라 변경은 없다. 간격(30s) < ALB idle_timeout(3600s).
+     */
+    @Scheduled(fixedRate = 30000)
+    public void sendPings() {
+        int sent = 0;
+        for (Map<String, WebSocketSession> sessions : rooms.values()) {
+            for (WebSocketSession session : sessions.values()) {
+                if (session.isOpen()) {
+                    try {
+                        // 세션은 ConcurrentWebSocketSessionDecorator라 sendMessage가 스레드 안전.
+                        session.sendMessage(new PingMessage());
+                        sent++;
+                    } catch (Exception e) {
+                        // 한 세션 실패가 나머지 ping을 막지 않게 — 로그만 남기고 계속.
+                        log.warn("Failed to send ping to session={}", session.getId(), e);
+                    }
+                }
+            }
+        }
+        if (sent > 0) {
+            log.debug("WS heartbeat: sent ping to {} sessions", sent);
         }
     }
 
