@@ -12,7 +12,7 @@ export default function DashboardTab({ guard }) {
 
   useEffect(() => {
     guard(getStats()).then(setStats).catch(() => {})
-    guard(getLogs({ limit: 10 }))
+    guard(getLogs({ verdict: 'BLOCK', limit: 10 }))
       .then((res) => setRecentLogs(res ?? []))
       .catch(() => {})
   }, [guard])
@@ -45,7 +45,12 @@ export default function DashboardTab({ guard }) {
       <div>
         <p className="text-sm font-medium text-gray-300 mb-3">최근 검열 내역</p>
         <div className="bg-gray-800/60 border border-gray-700/50 rounded-xl overflow-hidden">
-          <table className="w-full">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[55%]" />
+              <col className="w-[20%]" />
+              <col className="w-[25%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-gray-700/60">
                 <th className="px-5 py-3 text-left text-xs text-gray-600 font-medium">메시지</th>
@@ -56,9 +61,7 @@ export default function DashboardTab({ guard }) {
             <tbody className="divide-y divide-gray-700/40">
               {recentLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-gray-700/20 transition-colors">
-                  <td className="px-5 py-3.5 text-sm text-gray-300 max-w-[180px]">
-                    <span className="block truncate">{log.content ?? '—'}</span>
-                  </td>
+                  <td className="px-5 py-3.5 text-sm text-gray-300 truncate overflow-hidden">{log.content ?? '—'}</td>
                   <td className="px-4 py-3.5">{STAGE_BADGE[log.stage] ?? log.stage}</td>
                   <td className="px-5 py-3.5 text-xs text-gray-500 text-right whitespace-nowrap">
                     {new Date(log.checked_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}

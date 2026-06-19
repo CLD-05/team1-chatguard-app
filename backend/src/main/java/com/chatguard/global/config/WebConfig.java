@@ -1,5 +1,6 @@
 package com.chatguard.global.config;
 
+import com.chatguard.global.auth.AdminRoleInterceptor;
 import com.chatguard.global.auth.JwtAuthInterceptor;
 import com.chatguard.global.auth.LoginUserArgumentResolver;
 import lombok.RequiredArgsConstructor;
@@ -15,15 +16,19 @@ import java.util.List;
 public class WebConfig implements WebMvcConfigurer {
 
     private final JwtAuthInterceptor jwtAuthInterceptor;
+    private final AdminRoleInterceptor adminRoleInterceptor;
     private final LoginUserArgumentResolver loginUserArgumentResolver;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 1. JWT 인증 — /api/** 전체 (로그인 제외)
         registry.addInterceptor(jwtAuthInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns(
-                        "/api/login"
-                );
+                .excludePathPatterns("/api/login");
+
+        // 2. 어드민 role 검증 — /api/admin/** (D41/D46: role=ADMIN 미달 시 403)
+        registry.addInterceptor(adminRoleInterceptor)
+                .addPathPatterns("/api/admin/**");
     }
 
     @Override

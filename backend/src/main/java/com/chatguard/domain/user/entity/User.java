@@ -30,6 +30,10 @@ public class User {
     @Column(length = 50)
     private String displayName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10, nullable = false)
+    private UserRole role = UserRole.USER;
+
     @CreatedDate
     @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
@@ -39,5 +43,6 @@ public class User {
         this.username = username;
         this.password = password;
         this.displayName = displayName;
+        this.role = UserRole.USER;
     }
 }

@@ -31,7 +31,8 @@ public class UserService {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        String token = jwtProvider.generateToken(user.getId(), user.getDisplayName());
-        return new UserLoginResponse(user.getId(), user.getDisplayName(), token);
+        String role = user.getRole().name();
+        String token = jwtProvider.generateToken(user.getId(), user.getDisplayName(), role);
+        return new UserLoginResponse(user.getId(), user.getDisplayName(), role, token);
     }
 }

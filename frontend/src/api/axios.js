@@ -48,7 +48,7 @@ export async function login(username, password) {
     return { user: { id: 1, username, display_name: username, role: 'ADMIN' }, token: 'mock-jwt-token' }
   }
   const res = await api.post('/login', { username, password })
-  // 백엔드 응답(A-2): { user_id, display_name, token } → 프론트 공통 형태 { user, token }로 정규화
+  // 백엔드 응답(A-2, D41): { user_id, display_name, role, token } → 프론트 공통 형태 { user, token }로 정규화
   const { user_id, display_name, token, role } = res.data
   return {
     user: { id: user_id, username, display_name: display_name ?? username, role },
