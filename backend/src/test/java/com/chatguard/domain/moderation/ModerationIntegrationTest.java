@@ -1,9 +1,12 @@
 package com.chatguard.domain.moderation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
 
@@ -77,6 +80,10 @@ class ModerationIntegrationTest {
         ListOperations<String, String> listOps = mock(ListOperations.class);
         when(stringRedisTemplate.opsForList()).thenReturn(listOps);
         when(listOps.leftPush(anyString(), anyString())).thenReturn(1L);
+
+        ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(any())).thenReturn(null); // 기본값: freeze 없음
 
         // 테스트 격리: 기존 데이터가 있으면 테스트 결과에 영향을 주므로 삭제
         messageRepository.deleteAll();

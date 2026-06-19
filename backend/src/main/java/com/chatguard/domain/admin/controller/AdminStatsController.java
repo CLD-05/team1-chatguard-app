@@ -1,14 +1,15 @@
 package com.chatguard.domain.admin.controller;
 
 import com.chatguard.domain.admin.dto.AdminStatsResponse;
+import com.chatguard.domain.admin.dto.FreezeRequest;
 import com.chatguard.domain.admin.dto.ModerationLogResponse;
 import com.chatguard.domain.admin.service.AdminStatsService;
+import com.chatguard.domain.admin.service.RoomFreezeService;
+import com.chatguard.global.error.CustomException;
+import com.chatguard.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class AdminStatsController {
 
     private final AdminStatsService adminStatsService;
+    private final RoomFreezeService roomFreezeService;
 
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsResponse> getStats() {
@@ -32,5 +34,17 @@ public class AdminStatsController {
             @RequestParam(defaultValue = "50") int limit
     ) {
         return ResponseEntity.ok(adminStatsService.getLogs(stage, verdict, before, limit));
+    }
+
+    @PostMapping("/rooms/{id}/freeze")
+    public ResponseEntity<Void> freeze(
+            @PathVariable Long id,
+            @RequestBody FreezeRequest request
+    ) {
+        if (request.frozen() == null) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+        roomFreezeService.setFrozen(id, request.frozen());
+        return ResponseEntity.ok().build();
     }
 }

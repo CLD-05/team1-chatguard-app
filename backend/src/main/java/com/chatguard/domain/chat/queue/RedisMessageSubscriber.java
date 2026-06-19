@@ -1,6 +1,8 @@
 package com.chatguard.domain.chat.queue;
 
+import com.chatguard.domain.admin.service.RoomFreezeService;
 import com.chatguard.domain.chat.ws.ChatRoomSessionRegistry;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ public class RedisMessageSubscriber implements MessageListener {
 
     private final ChatRoomSessionRegistry registry;
     private final ObjectMapper objectMapper;
+    private final RoomFreezeService roomFreezeService;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
@@ -28,6 +31,14 @@ public class RedisMessageSubscriber implements MessageListener {
                 log.warn("Cannot parse roomId from channel={}", channel);
                 return;
             }
+
+            // room.freeze 이벤트는 로컬 캐시에도 반영 (A-4 step 7: 전 파드 로컬 플래그 갱신)
+            JsonNode root = objectMapper.readTree(payload);
+            if ("room.freeze".equals(root.path("type").asText())) {
+                boolean frozen = root.path("payload").path("frozen").asBoolean(false);
+                roomFreezeService.updateLocalCache(roomId, frozen);
+            }
+
             registry.broadcast(roomId, payload);
         } catch (Exception e) {
             log.error("Failed to forward room message", e);
