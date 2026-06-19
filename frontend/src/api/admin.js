@@ -15,3 +15,6 @@ export const addBadWord = (word) =>
 export const deleteBadWord = (id) =>
   api.delete(`/admin/keywords/${id}`).then((r) => r.data)
 
+export const freezeRoom = (roomId, frozen) =>
+  api.post(`/admin/rooms/${roomId}/freeze`, { frozen }).then((r) => r.data)
+
