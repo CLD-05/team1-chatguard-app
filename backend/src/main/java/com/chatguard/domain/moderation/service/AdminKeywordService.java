@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 
@@ -51,11 +53,11 @@ public class AdminKeywordService {
 
         BannedWord saved = bannedWordRepository.save(bannedWord);
 
-        // 로컬 JVM 캐시 동시 갱신
-        textModerationService.refreshCache();
-
-        // Redis Pub/Sub을 통한 전역 무효화 이벤트 발행
-        publishInvalidation();
+        // 트랜잭션 커밋 후 또는 즉시 캐시 갱신 및 무효화 이벤트 발행
+        executeAfterCommitOrImmediately(() -> {
+            textModerationService.refreshCache();
+            publishInvalidation();
+        });
 
         return saved;
     }
@@ -67,11 +69,24 @@ public class AdminKeywordService {
 
         bannedWordRepository.delete(bannedWord);
 
-        // 로컬 JVM 캐시 동시 갱신
-        textModerationService.refreshCache();
+        // 트랜잭션 커밋 후 또는 즉시 캐시 갱신 및 무효화 이벤트 발행
+        executeAfterCommitOrImmediately(() -> {
+            textModerationService.refreshCache();
+            publishInvalidation();
+        });
+    }
 
-        // Redis Pub/Sub을 통한 전역 무효화 이벤트 발행
-        publishInvalidation();
+    private void executeAfterCommitOrImmediately(Runnable action) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     private void publishInvalidation() {
