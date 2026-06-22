@@ -18,6 +18,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   const [hasMore, setHasMore] = useState(true)
   const [wsError, setWsError] = useState(null) // { code, message }
   const [frozen, setFrozen] = useState(false)
+  const [presence, setPresence] = useState({ count: 0, members: [] })
 
   const wsRef = useRef(null)
   const retryDelay = useRef(1_000)
@@ -44,6 +45,8 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       )
     } else if (event.type === 'room.freeze') {
       setFrozen(event.payload?.frozen ?? false)
+    } else if (event.type === 'presence.update') {
+      setPresence({ count: event.payload?.count ?? 0, members: event.payload?.members ?? [] })
     } else if (event.type === 'error') {
       const code = event.payload?.code ?? 'INTERNAL'
       setWsError({ code, message: event.payload?.message ?? '오류가 발생했습니다' })
@@ -194,5 +197,5 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
   const clearWsError = useCallback(() => setWsError(null), [])
 
-  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen }
+  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence }
 }

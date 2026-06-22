@@ -68,7 +68,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
   const onFatalError = useCallback(() => { logout(); navigate('/') }, [logout, navigate])
 
-  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen } = useChat({
+  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
     roomId,
     token,
     userId: user?.id ?? 0,
@@ -262,9 +262,21 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
                 </span>
               </div>
               <div>
-                <p className="text-sm font-semibold text-white leading-tight">
-                  {room?.name ?? `채팅방 #${roomId}`}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold text-white leading-tight">
+                    {room?.name ?? `채팅방 #${roomId}`}
+                  </p>
+                  {presence.count > 0 && (
+                    <span className="text-gray-400 text-sm flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                      </svg>
+                      {presence.count}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500">{room?.streamer_name}</p>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
