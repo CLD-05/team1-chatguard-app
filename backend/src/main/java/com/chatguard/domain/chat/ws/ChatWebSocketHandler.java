@@ -37,6 +37,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (roomId != null) {
             Long userId = getUserId(session);
             String displayName = getDisplayName(session);
+
+            // A-3: register 전에 join — publish 시점에 신규 세션이 registry에 없으므로 포워딩 안 됨
+            if (userId != null && displayName != null) {
+                roomPresenceService.join(roomId, userId, displayName);
+            }
             registry.register(roomId, session);
             log.info("WS connected: session={} roomId={} userId={}", session.getId(), roomId, userId);
 
@@ -47,10 +52,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 "payload", Map.of("room_id", roomId, "frozen", frozen)
             ))));
 
-            // D44: presence join — Redis Hash 갱신 + presence.update publish (전 파드 클라이언트에 전파)
-            // A-3: 신규 접속자에게 현재 presence 스냅샷 1회 직접 전송
+            // A-3: presence 스냅샷 직접 전송 — 정확히 1회
             if (userId != null && displayName != null) {
-                roomPresenceService.join(roomId, userId, displayName);
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
                     "type", "presence.update",
                     "payload", roomPresenceService.getSnapshot(roomId)
