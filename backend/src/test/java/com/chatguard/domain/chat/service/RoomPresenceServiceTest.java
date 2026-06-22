@@ -64,6 +64,7 @@ class RoomPresenceServiceTest {
 
     @Test
     void leave_후_presence_update_이벤트를_publish한다() {
+        when(hashOps.delete(eq("room:1:members"), eq("42"))).thenReturn(1L);
         when(hashOps.entries("room:1:members")).thenReturn(Map.of());
 
         roomPresenceService.leave(1L, 42L);
