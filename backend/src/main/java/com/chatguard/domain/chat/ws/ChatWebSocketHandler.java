@@ -43,7 +43,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 roomPresenceService.join(roomId, userId, displayName);
             }
             registry.register(roomId, session);
-            if (!session.isOpen()) return;
+            if (!session.isOpen()) {
+                if (userId != null && displayName != null) {
+                    roomPresenceService.leave(roomId, userId);
+                }
+                return;
+            }
             log.info("WS connected: session={} roomId={} userId={}", session.getId(), roomId, userId);
 
             // 신규 접속자에게 현재 freeze 상태 1회 전송 (D45)
