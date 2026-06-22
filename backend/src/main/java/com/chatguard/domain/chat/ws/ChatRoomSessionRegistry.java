@@ -39,7 +39,7 @@ public class ChatRoomSessionRegistry {
         int total = rooms.values().stream().mapToInt(Map::size).sum();
         if (total >= connectionCap) {
             log.warn("WS connection cap reached: current={}, cap={}, session={}", total, connectionCap, session.getId());
-            session.close(new CloseStatus(1008, "connection cap reached"));
+            session.close(new CloseStatus(1013, "connection cap reached"));
             return;
         }
         WebSocketSession decoratedSession = new ConcurrentWebSocketSessionDecorator(session, 10000, 65536);
