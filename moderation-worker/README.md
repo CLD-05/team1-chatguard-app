@@ -53,14 +53,14 @@ Windows(PowerShell):
 
 ```powershell
 cd moderation-worker
-.\run-unsmile.ps1
+.\run-model.ps1
 ```
 
 macOS / Linux(bash):
 
 ```bash
 cd moderation-worker
-./run-unsmile.sh
+./run-model.sh
 ```
 
 각 스크립트는 다음을 자동 처리한다.
@@ -91,7 +91,8 @@ python3.11 -m venv .venv
 export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL_PREFIX=room: \
   DB_URL="jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
   DB_USER=root DB_PASSWORD=chatguard1234 \
-  MODERATOR_MODE=unsmile MODEL_VERSION=unsmile-v1 BLOCK_THRESHOLD=0.70 TOKENIZERS_PARALLELISM=false
+  MODERATOR_MODE=real UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile MODEL_VERSION=unsmile-v1 \
+  BLUR_THRESHOLD=0.40 CLEAN_PENALTY=0.10 TOKENIZERS_PARALLELISM=false
 .venv/bin/python worker.py
 ```
 
@@ -106,11 +107,13 @@ ROOM_CHANNEL_PREFIX=room:
 DB_URL=jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 DB_USER=root
 DB_PASSWORD=backend/.env 값 사용
+DB_POOL_MAX_CONNECTIONS=5
 
-MODERATOR_MODE=unsmile
+MODERATOR_MODE=real
 UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
 MODEL_VERSION=unsmile-v1
-BLOCK_THRESHOLD=0.70
+BLUR_THRESHOLD=0.40
+CLEAN_PENALTY=0.10
 METRICS_PORT=8000
 ```
 
@@ -121,13 +124,13 @@ Windows(PowerShell):
 ```powershell
 $env:DB_URL="jdbc:mysql://localhost:3307/chatguard_dev"
 $env:REDIS_HOST="localhost"
-.\run-unsmile.ps1
+.\run-model.ps1
 ```
 
 macOS / Linux(bash):
 
 ```bash
-DB_URL="jdbc:mysql://localhost:3307/chatguard_dev" REDIS_HOST="localhost" ./run-unsmile.sh
+DB_URL="jdbc:mysql://localhost:3307/chatguard_dev" REDIS_HOST="localhost" ./run-model.sh
 ```
 
 ## Metrics 확인
@@ -213,10 +216,10 @@ PowerShell 실행 정책 때문에 스크립트 실행이 막히는 경우(Windo
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-`./run-unsmile.sh: Permission denied`가 나는 경우(macOS / Linux):
+`./run-model.sh: Permission denied`가 나는 경우(macOS / Linux):
 
 ```bash
-chmod +x run-unsmile.sh
+chmod +x run-model.sh
 ```
 
 `'cryptography' package is required for ... auth methods` 오류가 나는 경우:
@@ -231,3 +234,8 @@ worker가 실행되지만 검열 결과가 반영되지 않는 경우:
 - `backend/.env`의 `DB_PASSWORD`가 MySQL 컨테이너 비밀번호와 같은지 확인
 - `MOD_QUEUE_KEY`가 백엔드 설정과 같은지 확인
 - worker 터미널에 `inspect message_id=...` 로그가 찍히는지 확인
+
+부하 테스트 중 MySQL connection이 부족한 경우:
+
+- worker는 프로세스마다 최대 `DB_POOL_MAX_CONNECTIONS`개까지 MySQL 연결을 재사용한다.
+- 워커 레플리카 수와 MySQL `max_connections`를 함께 보고 값을 조정한다.

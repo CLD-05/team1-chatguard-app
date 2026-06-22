@@ -1,0 +1,201 @@
+id	category	message	expected_action	risk_type	note
+1	공격적으로 보이는 무해 문장	아 진짜 답답하네 다시 해보자	PASS	aggressive_but_safe	상황 불만
+2	공격적으로 보이는 무해 문장	와 이 판 너무 터졌다 다음 판 가자	PASS	aggressive_but_safe	게임 상황 표현
+3	공격적으로 보이는 무해 문장	방금 플레이는 좀 아쉬웠다	PASS	aggressive_but_safe	비판이지만 인신공격 아님
+4	공격적으로 보이는 무해 문장	이건 솔직히 별로였어	PASS	aggressive_but_safe	콘텐츠 평가
+5	공격적으로 보이는 무해 문장	오늘 경기 흐름이 너무 처참했다	PASS	aggressive_but_safe	경기 상태 평가
+6	공격적으로 보이는 무해 문장	아니 왜 거기서 들어가냐	PASS	aggressive_but_safe	상황 반응
+7	공격적으로 보이는 무해 문장	그 판단은 좀 위험했어	PASS	aggressive_but_safe	행동 평가
+8	공격적으로 보이는 무해 문장	팀 합이 안 맞아서 답답하다	PASS	aggressive_but_safe	팀워크 평가
+9	공격적으로 보이는 무해 문장	이 전략은 실패한 것 같아	PASS	aggressive_but_safe	전략 평가
+10	공격적으로 보이는 무해 문장	방송 오늘 좀 산만하네	PASS	aggressive_but_safe	방송 평가
+11	공격적으로 보이는 무해 문장	아 손이 꼬였네 다시 집중하자	PASS	aggressive_but_safe	자기 실수 표현
+12	공격적으로 보이는 무해 문장	방금은 내가 너무 못했다	PASS	aggressive_but_safe	자기 비판
+13	공격적으로 보이는 무해 문장	상대가 너무 잘해서 힘들다	PASS	aggressive_but_safe	상대 칭찬 포함
+14	공격적으로 보이는 무해 문장	와 멘탈 나갈 뻔했다	PASS	aggressive_but_safe	감정 표현
+15	공격적으로 보이는 무해 문장	진짜 열받지만 인정한다	PASS	aggressive_but_safe	공격 대상 없음
+16	공격적으로 보이는 무해 문장	그 장면은 보기 불편했다	PASS	aggressive_but_safe	장면 평가
+17	공격적으로 보이는 무해 문장	오늘 운영이 엉망이긴 했다	PASS	aggressive_but_safe	운영 평가
+18	공격적으로 보이는 무해 문장	이 조합은 좀 별로다	PASS	aggressive_but_safe	게임 조합 평가
+19	공격적으로 보이는 무해 문장	아까 판단은 민폐가 될 수도 있어	PASS	aggressive_but_safe	주의 표현
+20	공격적으로 보이는 무해 문장	이건 팀 입장에서 손해가 크다	PASS	aggressive_but_safe	분석형 표현
+21	공격적으로 보이는 무해 문장	너무 무리하지 말고 천천히 하자	PASS	aggressive_but_safe	권유
+22	공격적으로 보이는 무해 문장	지금 분위기 살벌하네	PASS	aggressive_but_safe	분위기 묘사
+23	공격적으로 보이는 무해 문장	상대 압박이 미쳤다	PASS	aggressive_but_safe	강조 표현
+24	공격적으로 보이는 무해 문장	와 이건 그냥 졌다 인정	PASS	aggressive_but_safe	패배 인정
+25	공격적으로 보이는 무해 문장	오늘 컨디션이 너무 안 좋아 보인다	PASS	aggressive_but_safe	상태 관찰
+26	공격적으로 보이는 무해 문장	방금 콜은 너무 급했다	PASS	aggressive_but_safe	판단 평가
+27	공격적으로 보이는 무해 문장	이 타이밍은 진짜 아깝다	PASS	aggressive_but_safe	아쉬움 표현
+28	공격적으로 보이는 무해 문장	지금은 무리하면 다 터진다	PASS	aggressive_but_safe	게임 상황 표현
+29	공격적으로 보이는 무해 문장	아 이건 보기 힘든 경기다	PASS	aggressive_but_safe	경기 평가
+30	공격적으로 보이는 무해 문장	상대 움직임이 너무 까다롭다	PASS	aggressive_but_safe	상대 평가
+31	공격적으로 보이는 무해 문장	오늘 픽은 조금 답이 없어 보인다	PASS	aggressive_but_safe	전략 평가
+32	공격적으로 보이는 무해 문장	이 장면은 다시 보면 화날 듯	PASS	aggressive_but_safe	감정 예측
+33	공격적으로 보이는 무해 문장	방금 판단은 냉정하게 실패야	PASS	aggressive_but_safe	행동 평가
+34	공격적으로 보이는 무해 문장	라인전이 너무 말렸다	PASS	aggressive_but_safe	게임 표현
+35	공격적으로 보이는 무해 문장	오늘 흐름은 진짜 무겁다	PASS	aggressive_but_safe	분위기 표현
+36	공격적으로 보이는 무해 문장	그 선택은 조금 무서웠다	PASS	aggressive_but_safe	행동 평가
+37	공격적으로 보이는 무해 문장	이건 실수라고 봐야겠다	PASS	aggressive_but_safe	실수 평가
+38	공격적으로 보이는 무해 문장	팀 전체가 흔들리는 느낌이다	PASS	aggressive_but_safe	팀 상태 평가
+39	공격적으로 보이는 무해 문장	아까 장면은 좀 과했다	PASS	aggressive_but_safe	장면 평가
+40	공격적으로 보이는 무해 문장	지금 판단은 다시 생각해야 한다	PASS	aggressive_but_safe	개선 제안
+41	키워드 우회형	너 진짜 ㅂㅅ 같네	BLUR	obfuscated_abuse	초성 욕설
+42	키워드 우회형	아 ㅅㅂ 왜 그러냐	BLUR	obfuscated_abuse	초성 욕설
+43	키워드 우회형	진짜 ㅈㄴ 못하네	BLUR	obfuscated_abuse	초성 욕설
+44	키워드 우회형	너 하는 거 개 ㅈ같다	BLUR	obfuscated_abuse	띄어쓰기 우회
+45	키워드 우회형	시 발 이게 말이 돼	BLUR	obfuscated_abuse	띄어쓰기 우회
+46	키워드 우회형	씨-발 진짜 답 없다	BLUR	obfuscated_abuse	기호 삽입
+47	키워드 우회형	병 신같은 판단이네	BLUR	obfuscated_abuse	띄어쓰기 우회
+48	키워드 우회형	너는 멍 청한 소리만 하네	BLUR	obfuscated_abuse	띄어쓰기 우회
+49	키워드 우회형	개ㅅㅐ끼처럼 굴지 마	BLUR	obfuscated_abuse	자모 혼합
+50	키워드 우회형	니가 하면 항상 개판이야 ㅂㅅ	BLUR	obfuscated_abuse	초성 욕설
+51	키워드 우회형	와 진짜 ssi발 소리 나오네	BLUR	obfuscated_abuse	영문 혼합
+52	키워드 우회형	너 때문에 팀이 ㅈ망함	BLUR	obfuscated_abuse	초성 조롱
+53	키워드 우회형	그냥 ㄲㅈ라	BLUR	obfuscated_abuse	초성 명령
+54	키워드 우회형	닥 ㅊ고 게임이나 해	BLUR	obfuscated_abuse	띄어쓰기 우회
+55	키워드 우회형	너 플레이 진짜 trash네	BLUR	obfuscated_abuse	영어 모욕
+56	키워드 우회형	what the fxxk are you doing	BLUR	obfuscated_abuse	영어 우회 욕설
+57	키워드 우회형	you are such an a-hole	BLUR	obfuscated_abuse	영어 우회 모욕
+58	키워드 우회형	그냥 k y s 해라	BLUR	obfuscated_abuse	자해 유도 우회
+59	키워드 우회형	니 실력은 gomi 수준임	BLUR	obfuscated_abuse	로마자 우회
+60	키워드 우회형	너는 진짜 ㄷㅅ 같아	BLUR	obfuscated_abuse	초성 모욕
+61	키워드 우회형	개못하네 라고 쓰면 걸리냐	BLUR	obfuscated_abuse	직접 조롱
+62	키워드 우회형	너 완전 babo네	BLUR	obfuscated_abuse	로마자 우회
+63	키워드 우회형	하는 짓이 byungshin 같음	BLUR	obfuscated_abuse	로마자 우회
+64	키워드 우회형	시1발 이건 아니지	BLUR	obfuscated_abuse	숫자 삽입
+65	키워드 우회형	존1나 못한다 진짜	BLUR	obfuscated_abuse	숫자 삽입
+66	키워드 우회형	너 진짜 개 못 하 는 구나	BLUR	obfuscated_abuse	띄어쓰기 우회 조롱
+67	키워드 우회형	이건 jonna 답답하네	BLUR	obfuscated_abuse	로마자 욕설
+68	키워드 우회형	너는 si bal 왜 그래	BLUR	obfuscated_abuse	로마자 띄어쓰기
+69	키워드 우회형	그 플레이는 ㅆ ㄹ ㄱ 같아	BLUR	obfuscated_abuse	초성 우회 비하
+70	키워드 우회형	입 좀 d a k 쳐	BLUR	obfuscated_abuse	로마자 명령
+71	키워드 우회형	너 때문에 개망했잖아 ㅅㅂ	BLUR	obfuscated_abuse	초성 욕설
+72	키워드 우회형	완전 개노답 플레이네	BLUR	obfuscated_abuse	강한 비하
+73	키워드 우회형	니 판단 진짜 ㅂ ㅅ임	BLUR	obfuscated_abuse	띄어쓰기 초성
+74	키워드 우회형	이걸 못하면 babo 아닌가	BLUR	obfuscated_abuse	로마자 조롱
+75	키워드 우회형	아오 sㅣ발 또 시작이네	BLUR	obfuscated_abuse	한영 혼합
+76	키워드 우회형	너는 진짜 n00b 그 자체다	BLUR	obfuscated_abuse	영어 게임 비하
+77	키워드 우회형	pls uninstall 수준임	BLUR	obfuscated_abuse	게임 비하
+78	키워드 우회형	그냥 noob trash네	BLUR	obfuscated_abuse	영어 조롱
+79	키워드 우회형	너 하는 거 보면 현타 온다 ㅈㄴ	BLUR	obfuscated_abuse	초성 욕설
+80	키워드 우회형	개같 은 판단만 하네	BLUR	obfuscated_abuse	띄어쓰기 욕설
+81	욕설 없는 비하/혐오	저 사람들은 원래 다 저래	BLUR	hate_or_derogation	집단 일반화
+82	욕설 없는 비하/혐오	그 지역 출신은 믿기 어렵다	BLUR	hate_or_derogation	지역 비하
+83	욕설 없는 비하/혐오	여자라서 게임 이해를 못 하는 듯	BLUR	hate_or_derogation	성별 비하
+84	욕설 없는 비하/혐오	남자들은 원래 공감 능력이 없다	BLUR	hate_or_derogation	성별 일반화
+85	욕설 없는 비하/혐오	외국인은 우리 팀에 안 맞는다	BLUR	hate_or_derogation	국적 배척
+86	욕설 없는 비하/혐오	나이 많은 사람은 그냥 빠지는 게 낫다	BLUR	hate_or_derogation	연령 차별
+87	욕설 없는 비하/혐오	어린 애들은 말이 안 통한다	BLUR	hate_or_derogation	연령 일반화
+88	욕설 없는 비하/혐오	저런 애들은 사회성이 없다	BLUR	hate_or_derogation	인격 비하
+89	욕설 없는 비하/혐오	그 사람 생긴 것부터 별로다	BLUR	hate_or_derogation	외모 비하
+90	욕설 없는 비하/혐오	목소리 들으니 수준이 보인다	BLUR	hate_or_derogation	인격 비하
+91	욕설 없는 비하/혐오	그런 사람은 채팅방에 있으면 안 된다	BLUR	hate_or_derogation	배척
+92	욕설 없는 비하/혐오	저 팀 팬들은 전부 이상하다	BLUR	hate_or_derogation	집단 비하
+93	욕설 없는 비하/혐오	저 직업 가진 사람들은 다 똑같다	BLUR	hate_or_derogation	직업군 일반화
+94	욕설 없는 비하/혐오	그 나라 사람들은 매너가 없다	BLUR	hate_or_derogation	국적 비하
+95	욕설 없는 비하/혐오	저런 부류는 말 섞을 가치가 없다	BLUR	hate_or_derogation	집단 비하
+96	욕설 없는 비하/혐오	장애 있는 것처럼 플레이하네	BLUR	hate_or_derogation	장애 비하
+97	욕설 없는 비하/혐오	가난해 보여서 그런가 행동이 별로다	BLUR	hate_or_derogation	계층 비하
+98	욕설 없는 비하/혐오	그 종교 믿는 사람들은 피곤하다	BLUR	hate_or_derogation	종교 비하
+99	욕설 없는 비하/혐오	성소수자는 이런 방송에 안 어울린다	BLUR	hate_or_derogation	성소수자 배척
+100	욕설 없는 비하/혐오	너 같은 유형은 팀에 도움 안 된다	BLUR	hate_or_derogation	인격 배척
+101	욕설 없는 비하/혐오	저 사람 말투가 천박하다	BLUR	hate_or_derogation	인격 비하
+102	욕설 없는 비하/혐오	팬 수준이 딱 보인다	BLUR	hate_or_derogation	집단 비하
+103	욕설 없는 비하/혐오	저런 사람은 그냥 무시해야 한다	BLUR	hate_or_derogation	인격 배척
+104	욕설 없는 비하/혐오	그 동네 사람들은 원래 시끄럽다	BLUR	hate_or_derogation	지역 비하
+105	욕설 없는 비하/혐오	그 성별이면 당연히 못하지	BLUR	hate_or_derogation	성별 비하
+106	욕설 없는 비하/혐오	그 나이대는 채팅 매너가 없다	BLUR	hate_or_derogation	연령 일반화
+107	욕설 없는 비하/혐오	그 나라 말투는 듣기 싫다	BLUR	hate_or_derogation	국적 비하
+108	욕설 없는 비하/혐오	저런 외모로 방송에 나오다니	BLUR	hate_or_derogation	외모 비하
+109	욕설 없는 비하/혐오	그 사람들은 원래 계산적이다	BLUR	hate_or_derogation	집단 일반화
+110	욕설 없는 비하/혐오	저런 계층은 예의가 없다	BLUR	hate_or_derogation	계층 비하
+111	욕설 없는 비하/혐오	그 학교 출신은 다 똑같다	BLUR	hate_or_derogation	학벌 비하
+112	욕설 없는 비하/혐오	그 직군 사람들은 말이 안 통한다	BLUR	hate_or_derogation	직업군 비하
+113	욕설 없는 비하/혐오	저런 취향은 정상적이지 않다	BLUR	hate_or_derogation	정체성 비하 가능
+114	욕설 없는 비하/혐오	그 사람 사투리 때문에 수준이 보인다	BLUR	hate_or_derogation	지역 비하
+115	욕설 없는 비하/혐오	저런 체형이면 민폐다	BLUR	hate_or_derogation	외모/신체 비하
+116	욕설 없는 비하/혐오	그런 집단은 방송에서 배제해야 한다	BLUR	hate_or_derogation	집단 배척
+117	욕설 없는 비하/혐오	그런 배경이면 뻔하지	BLUR	hate_or_derogation	배경 일반화
+118	욕설 없는 비하/혐오	저 사람은 태도부터 하급이다	BLUR	hate_or_derogation	인격 비하
+119	욕설 없는 비하/혐오	그 팬덤은 대화가 안 된다	BLUR	hate_or_derogation	집단 비하
+120	욕설 없는 비하/혐오	저런 부류는 채팅 금지해야 한다	BLUR	hate_or_derogation	집단 배척
+121	경계 케이스	너 오늘 왜 이렇게 못하냐	BLUR	borderline	직접 비난
+122	경계 케이스	오늘 플레이 좀 아쉽다	PASS	borderline	비판 수위 낮음
+123	경계 케이스	그 판단은 민폐였어	BLUR	borderline	상대 행동 비난
+124	경계 케이스	그 판단은 팀에 부담이 됐어	PASS	borderline	완화된 표현
+125	경계 케이스	진짜 역겹게 잘한다	PASS	borderline	칭찬 강조로 사용
+126	경계 케이스	상대 운영이 역겹다	BLUR	borderline	부정적 공격 표현
+127	경계 케이스	미쳤다 이걸 이기네	PASS	borderline	감탄 표현
+128	경계 케이스	너 진짜 미쳤냐	BLUR	borderline	상대 직접 공격
+129	경계 케이스	이건 사람 할 짓이 아니다	BLUR	borderline	강한 비난
+130	경계 케이스	이건 사람이 하기 힘든 플레이다	PASS	borderline	칭찬 가능 표현
+131	경계 케이스	제발 정신 차리고 하자	PASS	borderline	주의 권유
+132	경계 케이스	정신 차려라 너 때문에 망했다	BLUR	borderline	책임 전가
+133	경계 케이스	너무 답답해서 못 보겠다	PASS	borderline	상황 불만
+134	경계 케이스	너 때문에 답답해서 못 보겠다	BLUR	borderline	직접 공격
+135	경계 케이스	오늘은 그냥 운이 안 좋았다	PASS	borderline	중립 평가
+136	경계 케이스	너는 운빨 아니면 아무것도 못한다	BLUR	borderline	능력 비하
+137	경계 케이스	그 장면은 불쾌할 수 있겠다	PASS	borderline	상황 설명
+138	경계 케이스	너 말투가 불쾌하다	BLUR	borderline	직접 비난
+139	경계 케이스	이번 판은 버리는 게 낫겠다	PASS	borderline	게임 전략
+140	경계 케이스	너는 그냥 버리는 게 낫다	BLUR	borderline	인격 배척
+141	경계 케이스	팬들 반응이 거칠다	PASS	borderline	상황 묘사
+142	경계 케이스	저 팬들은 수준 낮다	BLUR	borderline	집단 비하
+143	경계 케이스	이 채팅 분위기 살벌하다	PASS	borderline	분위기 묘사
+144	경계 케이스	너 같은 애랑은 말하기 싫다	BLUR	borderline	인격 배척
+145	경계 케이스	오늘은 말 섞기 힘든 분위기다	PASS	borderline	분위기 표현
+146	경계 케이스	방금 건 좀 선 넘었다	PASS	borderline	행동 평가
+147	경계 케이스	너는 선 넘는 말만 한다	BLUR	borderline	직접 비난
+148	경계 케이스	이 플레이는 답답할 수 있다	PASS	borderline	상황 평가
+149	경계 케이스	너는 존재 자체가 답답하다	BLUR	borderline	인격 공격
+150	경계 케이스	그 말은 듣는 사람에 따라 불편할 수 있다	PASS	borderline	메타 설명
+151	경계 케이스	네 말은 불편해서 듣기 싫다	BLUR	borderline	직접 배척
+152	경계 케이스	팀이 지금 완전히 무너졌다	PASS	borderline	상황 묘사
+153	경계 케이스	너 때문에 팀이 완전히 무너졌다	BLUR	borderline	책임 전가
+154	경계 케이스	그 장면은 좀 충격이었다	PASS	borderline	감상 표현
+155	경계 케이스	너 하는 꼴이 충격이다	BLUR	borderline	직접 조롱
+156	경계 케이스	말투가 공격적으로 들릴 수 있어	PASS	borderline	주의 표현
+157	경계 케이스	네 말투는 공격적이라 짜증난다	BLUR	borderline	직접 공격
+158	경계 케이스	오늘 채팅이 과열됐다	PASS	borderline	상황 설명
+159	경계 케이스	저 사람은 항상 과열만 만든다	BLUR	borderline	인격 비난
+160	경계 케이스	이번 장면은 논란이 될 수 있겠다	PASS	borderline	중립 예측
+161	독한 PASS	개잘하네 진짜	PASS	intense_safe	강한 칭찬
+162	독한 PASS	와 미친 플레이였다	PASS	intense_safe	감탄 표현
+163	독한 PASS	오늘 폼 미쳤다	PASS	intense_safe	칭찬 강조
+164	독한 PASS	개웃기네 이 장면	PASS	intense_safe	재미 표현
+165	독한 PASS	이건 진짜 찢었다	PASS	intense_safe	강한 칭찬
+166	독한 PASS	죽여주네 오늘 분위기	PASS	intense_safe	긍정적 감탄
+167	독한 PASS	개좋다 이 흐름	PASS	intense_safe	긍정 표현
+168	독한 PASS	와 개멋있다	PASS	intense_safe	칭찬 표현
+169	독한 PASS	돌았다 진짜 이건	PASS	intense_safe	감탄 표현
+170	독한 PASS	레전드네 방금 장면	PASS	intense_safe	칭찬 표현
+171	독한 PASS	개빠르네 반응속도	PASS	intense_safe	능력 칭찬
+172	독한 PASS	미친 센스다	PASS	intense_safe	칭찬 강조
+173	독한 PASS	개고수네 진짜	PASS	intense_safe	실력 칭찬
+174	독한 PASS	와 소름 돋았다	PASS	intense_safe	감탄 표현
+175	독한 PASS	이건 진짜 말이 안 된다	PASS	intense_safe	긍정적 놀람
+176	독한 PASS	개쩐다 오늘	PASS	intense_safe	강한 감탄
+177	독한 PASS	진짜 미쳤네 잘한다	PASS	intense_safe	칭찬 표현
+178	독한 PASS	와 이걸 살리네	PASS	intense_safe	감탄 표현
+179	독한 PASS	개깔끔했다 방금	PASS	intense_safe	칭찬 표현
+180	독한 PASS	진짜 압도적이다	PASS	intense_safe	긍정 평가
+181	독한 PASS	와 개재밌다	PASS	intense_safe	재미 표현
+182	독한 PASS	오늘 텐션 미쳤다	PASS	intense_safe	긍정적 분위기
+183	독한 PASS	개잘 풀렸다 이번 판	PASS	intense_safe	상황 긍정
+184	독한 PASS	미친 집중력이네	PASS	intense_safe	능력 칭찬
+185	독한 PASS	와 진짜 괴물 같다	PASS	intense_safe	실력 칭찬
+186	독한 PASS	이건 그냥 예술이다	PASS	intense_safe	칭찬 표현
+187	독한 PASS	개든든하다 진짜	PASS	intense_safe	긍정 표현
+188	독한 PASS	폼이 완전 살아났다	PASS	intense_safe	상태 칭찬
+189	독한 PASS	오늘 감각 미쳤네	PASS	intense_safe	칭찬 강조
+190	독한 PASS	와 개소름이다	PASS	intense_safe	감탄 표현
+191	독한 PASS	진짜 미친 장면 나왔다	PASS	intense_safe	감탄 표현
+192	독한 PASS	개쩌는 타이밍이었다	PASS	intense_safe	칭찬 표현
+193	독한 PASS	이건 칭찬 안 할 수가 없다	PASS	intense_safe	명시적 칭찬
+194	독한 PASS	와 완전 박살냈다	PASS	intense_safe	승리 강조
+195	독한 PASS	개시원하게 이겼다	PASS	intense_safe	긍정 표현
+196	독한 PASS	미쳤다 이런 전개는 처음 본다	PASS	intense_safe	감탄 표현
+197	독한 PASS	진짜 끝내준다	PASS	intense_safe	칭찬 표현
+198	독한 PASS	개맛있게 성공했다	PASS	intense_safe	성공 감탄
+199	독한 PASS	와 이건 인정할 수밖에 없다	PASS	intense_safe	인정 표현
+200	독한 PASS	진짜 역대급이다	PASS	intense_safe	최상급 칭찬

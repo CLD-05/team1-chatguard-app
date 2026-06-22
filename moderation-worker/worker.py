@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pymysql
 import redis
+from dbutils.pooled_db import PooledDB
 from prometheus_client import Counter, Histogram, start_http_server
 
 
@@ -19,12 +20,14 @@ DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=f
 # A-5 env 계약 키만 읽는다(비계약 폴백 DB_USERNAME 제거).
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_POOL_MAX_CONNECTIONS = int(os.getenv("DB_POOL_MAX_CONNECTIONS", "5"))
 
 # A-1 Worker 책임 = 모델 in-process 판정. 기본값은 real(실모델), mock은 명시 설정 시에만.
 MODERATOR_MODE = os.getenv("MODERATOR_MODE", "real").lower()
 UNSMILE_MODEL_ID = os.getenv("UNSMILE_MODEL_ID", "smilegate-ai/kor_unsmile")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "unsmile-v1")
-BLOCK_THRESHOLD = float(os.getenv("BLOCK_THRESHOLD", "0.70"))
+BLUR_THRESHOLD = float(os.getenv("BLUR_THRESHOLD", "0.40"))
+CLEAN_PENALTY = float(os.getenv("CLEAN_PENALTY", "0.10"))
 # A-5 런타임 계약: Worker 메트릭 포트는 8000 고정.
 METRICS_PORT = 8000
 
@@ -37,21 +40,30 @@ MOCK_TOXIC_TERMS = [
     if term.strip()
 ]
 
-TOXIC_LABEL_KEYWORDS = [
-    term.strip().lower()
-    for term in os.getenv(
-        "TOXIC_LABEL_KEYWORDS",
-        "악플,욕설,혐오,여성,남성,성소수자,인종,국적,연령,지역,종교,기타",
-    ).split(",")
-    if term.strip()
+TOXIC_LABELS = [
+    "여성/가족",
+    "남성",
+    "성소수자",
+    "인종/국적",
+    "연령",
+    "지역",
+    "종교",
+    "기타 혐오",
+    "악플/욕설",
 ]
-CLEAN_LABEL_KEYWORDS = [
-    term.strip().lower()
-    for term in os.getenv("CLEAN_LABEL_KEYWORDS", "clean,정상").split(",")
-    if term.strip()
-]
-
+WEIGHTS = {
+    "여성/가족": 1.15,
+    "남성": 1.0,
+    "성소수자": 1.25,
+    "인종/국적": 1.25,
+    "연령": 1.05,
+    "지역": 1.05,
+    "종교": 1.15,
+    "기타 혐오": 1.10,
+    "악플/욕설": 1.0,
+}
 _classifier = None
+_db_pool = None
 
 JOBS_TOTAL = Counter(
     "moderation_jobs_total",
@@ -107,8 +119,12 @@ def classify_with_unsmile(content):
         log("loaded unsmile model")
 
     raw_result = _classifier(content)
-    toxic_score, top_label = extract_toxic_score(raw_result)
-    return build_result(toxic_score, MODEL_VERSION, f"unsmile:{top_label}={toxic_score:.3f}")
+    final_score, top_label = extract_toxic_score(raw_result)
+    return build_result(
+        final_score,
+        MODEL_VERSION,
+        f"unsmile_weighted:{top_label}={final_score:.3f}",
+    )
 
 
 def extract_toxic_score(raw_result):
@@ -118,32 +134,31 @@ def extract_toxic_score(raw_result):
     if isinstance(rows, dict):
         rows = [rows]
 
-    best_toxic = 0.0
-    best_clean = 0.0
-    top_label = "unknown"
-    top_score = -1.0
+    scores = {label: 0.0 for label in TOXIC_LABELS}
+    scores["clean"] = 0.0
 
     for row in rows:
         label = str(row.get("label", "unknown"))
-        label_lower = label.lower()
         score = float(row.get("score", 0.0))
-        if score > top_score:
-            top_score = score
-            top_label = label
-        if any(keyword in label_lower for keyword in TOXIC_LABEL_KEYWORDS):
-            best_toxic = max(best_toxic, score)
-        if any(keyword in label_lower for keyword in CLEAN_LABEL_KEYWORDS):
-            best_clean = max(best_clean, score)
+        if label in scores:
+            scores[label] = score
+        elif label.lower() == "clean":
+            scores["clean"] = score
 
-    if best_toxic == 0.0 and best_clean > 0.0:
-        return max(0.0, 1.0 - best_clean), top_label
-    if best_toxic == 0.0 and rows:
-        return max(float(row.get("score", 0.0)) for row in rows), top_label
-    return best_toxic, top_label
+    top_label = max(
+        TOXIC_LABELS,
+        key=lambda label: scores[label] * WEIGHTS[label],
+    )
+    raw_toxic_score = scores[top_label]
+    weighted_toxic_score = raw_toxic_score * WEIGHTS[top_label]
+    clean_score = scores["clean"]
+    final_score = max(0.0, min(1.0, weighted_toxic_score - clean_score * CLEAN_PENALTY))
+
+    return final_score, top_label
 
 
 def build_result(score, model_version, reason):
-    if score >= BLOCK_THRESHOLD:
+    if score >= BLUR_THRESHOLD:
         action = "blur"
         verdict = "BLOCK"
     else:
@@ -195,13 +210,7 @@ def handle_job(raw, redis_client):
 def apply_result_to_db(job, result):
     message_id = job["message_id"]
     checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    connection = pymysql.connect(
-        **parse_db_url(DB_URL),
-        user=DB_USER,
-        password=DB_PASSWORD,
-        charset="utf8mb4",
-        autocommit=False,
-    )
+    connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             if result["action"] == "blur":
@@ -236,6 +245,29 @@ def apply_result_to_db(job, result):
         raise
     finally:
         connection.close()
+
+
+def get_db_connection():
+    return get_db_pool().connection()
+
+
+def get_db_pool():
+    global _db_pool
+    if _db_pool is None:
+        _db_pool = PooledDB(
+            creator=pymysql,
+            maxconnections=DB_POOL_MAX_CONNECTIONS,
+            mincached=1,
+            maxcached=DB_POOL_MAX_CONNECTIONS,
+            blocking=True,
+            ping=1,
+            **parse_db_url(DB_URL),
+            user=DB_USER,
+            password=DB_PASSWORD,
+            charset="utf8mb4",
+            autocommit=False,
+        )
+    return _db_pool
 
 
 def publish_hide(redis_client, room_id, message_id, action):
@@ -296,6 +328,11 @@ def main():
     log(
         "worker started "
         f"mode={MODERATOR_MODE} "
+        f"model={UNSMILE_MODEL_ID} "
+        f"model_version={MODEL_VERSION} "
+        f"blur_threshold={BLUR_THRESHOLD:.2f} "
+        f"clean_penalty={CLEAN_PENALTY:.2f} "
+        f"db_pool_max_connections={DB_POOL_MAX_CONNECTIONS} "
         f"queue={MOD_QUEUE_KEY} "
         f"redis={REDIS_HOST}:{REDIS_PORT} "
         f"db={DB_URL} "
