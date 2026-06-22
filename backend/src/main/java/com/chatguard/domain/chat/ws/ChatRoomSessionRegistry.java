@@ -2,6 +2,7 @@ package com.chatguard.domain.chat.ws;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.PingMessage;
@@ -23,6 +24,9 @@ public class ChatRoomSessionRegistry {
     private final ConcurrentHashMap<Long, Map<String, WebSocketSession>> rooms = new ConcurrentHashMap<>();
     private final MeterRegistry meterRegistry;
 
+    @Value("${WS_CONNECTION_CAP:200}")
+    private int connectionCap;
+
     public ChatRoomSessionRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
         // B-2: ws_active_connections (gauge) 등록
@@ -31,9 +35,14 @@ public class ChatRoomSessionRegistry {
         );
     }
 
-    public void register(Long roomId, WebSocketSession session) {
+    public void register(Long roomId, WebSocketSession session) throws IOException {
+        int total = rooms.values().stream().mapToInt(Map::size).sum();
+        if (total >= connectionCap) {
+            log.warn("WS connection cap reached: current={}, cap={}, session={}", total, connectionCap, session.getId());
+            session.close(new CloseStatus(1008, "connection cap reached"));
+            return;
+        }
         WebSocketSession decoratedSession = new ConcurrentWebSocketSessionDecorator(session, 10000, 65536);
-        
         rooms.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>())
                 .put(session.getId(), decoratedSession);
     }
