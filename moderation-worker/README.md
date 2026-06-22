@@ -91,7 +91,7 @@ python3.11 -m venv .venv
 export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL_PREFIX=room: \
   DB_URL="jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
   DB_USER=root DB_PASSWORD=chatguard1234 \
-  MODERATOR_MODE=real UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile MODEL_VERSION=unsmile-v1 \
+  MODERATOR_MODE=real UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile MODEL_VERSION=unsmile-weighted-v1 \
   BLUR_THRESHOLD=0.40 CLEAN_PENALTY=0.10 TOKENIZERS_PARALLELISM=false
 .venv/bin/python worker.py
 ```
@@ -111,7 +111,7 @@ DB_POOL_MAX_CONNECTIONS=5
 
 MODERATOR_MODE=real
 UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
-MODEL_VERSION=unsmile-v1
+MODEL_VERSION=unsmile-weighted-v1
 BLUR_THRESHOLD=0.40
 CLEAN_PENALTY=0.10
 METRICS_PORT=8000

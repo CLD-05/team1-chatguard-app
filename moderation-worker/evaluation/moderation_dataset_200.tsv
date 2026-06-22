@@ -159,43 +159,43 @@ id	category	message	expected_action	risk_type	note
 158	경계 케이스	오늘 채팅이 과열됐다	PASS	borderline	상황 설명
 159	경계 케이스	저 사람은 항상 과열만 만든다	BLUR	borderline	인격 비난
 160	경계 케이스	이번 장면은 논란이 될 수 있겠다	PASS	borderline	중립 예측
-161	독한 PASS	개잘하네 진짜	PASS	intense_safe	강한 칭찬
-162	독한 PASS	와 미친 플레이였다	PASS	intense_safe	감탄 표현
-163	독한 PASS	오늘 폼 미쳤다	PASS	intense_safe	칭찬 강조
-164	독한 PASS	개웃기네 이 장면	PASS	intense_safe	재미 표현
-165	독한 PASS	이건 진짜 찢었다	PASS	intense_safe	강한 칭찬
-166	독한 PASS	죽여주네 오늘 분위기	PASS	intense_safe	긍정적 감탄
-167	독한 PASS	개좋다 이 흐름	PASS	intense_safe	긍정 표현
-168	독한 PASS	와 개멋있다	PASS	intense_safe	칭찬 표현
-169	독한 PASS	돌았다 진짜 이건	PASS	intense_safe	감탄 표현
-170	독한 PASS	레전드네 방금 장면	PASS	intense_safe	칭찬 표현
-171	독한 PASS	개빠르네 반응속도	PASS	intense_safe	능력 칭찬
-172	독한 PASS	미친 센스다	PASS	intense_safe	칭찬 강조
-173	독한 PASS	개고수네 진짜	PASS	intense_safe	실력 칭찬
-174	독한 PASS	와 소름 돋았다	PASS	intense_safe	감탄 표현
-175	독한 PASS	이건 진짜 말이 안 된다	PASS	intense_safe	긍정적 놀람
-176	독한 PASS	개쩐다 오늘	PASS	intense_safe	강한 감탄
-177	독한 PASS	진짜 미쳤네 잘한다	PASS	intense_safe	칭찬 표현
-178	독한 PASS	와 이걸 살리네	PASS	intense_safe	감탄 표현
-179	독한 PASS	개깔끔했다 방금	PASS	intense_safe	칭찬 표현
-180	독한 PASS	진짜 압도적이다	PASS	intense_safe	긍정 평가
-181	독한 PASS	와 개재밌다	PASS	intense_safe	재미 표현
-182	독한 PASS	오늘 텐션 미쳤다	PASS	intense_safe	긍정적 분위기
-183	독한 PASS	개잘 풀렸다 이번 판	PASS	intense_safe	상황 긍정
-184	독한 PASS	미친 집중력이네	PASS	intense_safe	능력 칭찬
-185	독한 PASS	와 진짜 괴물 같다	PASS	intense_safe	실력 칭찬
-186	독한 PASS	이건 그냥 예술이다	PASS	intense_safe	칭찬 표현
-187	독한 PASS	개든든하다 진짜	PASS	intense_safe	긍정 표현
-188	독한 PASS	폼이 완전 살아났다	PASS	intense_safe	상태 칭찬
-189	독한 PASS	오늘 감각 미쳤네	PASS	intense_safe	칭찬 강조
-190	독한 PASS	와 개소름이다	PASS	intense_safe	감탄 표현
-191	독한 PASS	진짜 미친 장면 나왔다	PASS	intense_safe	감탄 표현
-192	독한 PASS	개쩌는 타이밍이었다	PASS	intense_safe	칭찬 표현
-193	독한 PASS	이건 칭찬 안 할 수가 없다	PASS	intense_safe	명시적 칭찬
-194	독한 PASS	와 완전 박살냈다	PASS	intense_safe	승리 강조
-195	독한 PASS	개시원하게 이겼다	PASS	intense_safe	긍정 표현
-196	독한 PASS	미쳤다 이런 전개는 처음 본다	PASS	intense_safe	감탄 표현
-197	독한 PASS	진짜 끝내준다	PASS	intense_safe	칭찬 표현
-198	독한 PASS	개맛있게 성공했다	PASS	intense_safe	성공 감탄
-199	독한 PASS	와 이건 인정할 수밖에 없다	PASS	intense_safe	인정 표현
-200	독한 PASS	진짜 역대급이다	PASS	intense_safe	최상급 칭찬
+161	강한 긍정 표현	개잘하네 진짜	PASS	intense_safe	강한 칭찬
+162	강한 긍정 표현	와 미친 플레이였다	PASS	intense_safe	감탄 표현
+163	강한 긍정 표현	오늘 폼 미쳤다	PASS	intense_safe	칭찬 강조
+164	강한 긍정 표현	개웃기네 이 장면	PASS	intense_safe	재미 표현
+165	강한 긍정 표현	이건 진짜 찢었다	PASS	intense_safe	강한 칭찬
+166	강한 긍정 표현	죽여주네 오늘 분위기	PASS	intense_safe	긍정적 감탄
+167	강한 긍정 표현	개좋다 이 흐름	PASS	intense_safe	긍정 표현
+168	강한 긍정 표현	와 개멋있다	PASS	intense_safe	칭찬 표현
+169	강한 긍정 표현	돌았다 진짜 이건	PASS	intense_safe	감탄 표현
+170	강한 긍정 표현	레전드네 방금 장면	PASS	intense_safe	칭찬 표현
+171	강한 긍정 표현	개빠르네 반응속도	PASS	intense_safe	능력 칭찬
+172	강한 긍정 표현	미친 센스다	PASS	intense_safe	칭찬 강조
+173	강한 긍정 표현	개고수네 진짜	PASS	intense_safe	실력 칭찬
+174	강한 긍정 표현	와 소름 돋았다	PASS	intense_safe	감탄 표현
+175	강한 긍정 표현	이건 진짜 말이 안 된다	PASS	intense_safe	긍정적 놀람
+176	강한 긍정 표현	개쩐다 오늘	PASS	intense_safe	강한 감탄
+177	강한 긍정 표현	진짜 미쳤네 잘한다	PASS	intense_safe	칭찬 표현
+178	강한 긍정 표현	와 이걸 살리네	PASS	intense_safe	감탄 표현
+179	강한 긍정 표현	개깔끔했다 방금	PASS	intense_safe	칭찬 표현
+180	강한 긍정 표현	진짜 압도적이다	PASS	intense_safe	긍정 평가
+181	강한 긍정 표현	와 개재밌다	PASS	intense_safe	재미 표현
+182	강한 긍정 표현	오늘 텐션 미쳤다	PASS	intense_safe	긍정적 분위기
+183	강한 긍정 표현	개잘 풀렸다 이번 판	PASS	intense_safe	상황 긍정
+184	강한 긍정 표현	미친 집중력이네	PASS	intense_safe	능력 칭찬
+185	강한 긍정 표현	와 진짜 괴물 같다	PASS	intense_safe	실력 칭찬
+186	강한 긍정 표현	이건 그냥 예술이다	PASS	intense_safe	칭찬 표현
+187	강한 긍정 표현	개든든하다 진짜	PASS	intense_safe	긍정 표현
+188	강한 긍정 표현	폼이 완전 살아났다	PASS	intense_safe	상태 칭찬
+189	강한 긍정 표현	오늘 감각 미쳤네	PASS	intense_safe	칭찬 강조
+190	강한 긍정 표현	와 개소름이다	PASS	intense_safe	감탄 표현
+191	강한 긍정 표현	진짜 미친 장면 나왔다	PASS	intense_safe	감탄 표현
+192	강한 긍정 표현	개쩌는 타이밍이었다	PASS	intense_safe	칭찬 표현
+193	강한 긍정 표현	이건 칭찬 안 할 수가 없다	PASS	intense_safe	명시적 칭찬
+194	강한 긍정 표현	와 완전 박살냈다	PASS	intense_safe	승리 강조
+195	강한 긍정 표현	개시원하게 이겼다	PASS	intense_safe	긍정 표현
+196	강한 긍정 표현	미쳤다 이런 전개는 처음 본다	PASS	intense_safe	감탄 표현
+197	강한 긍정 표현	진짜 끝내준다	PASS	intense_safe	칭찬 표현
+198	강한 긍정 표현	개맛있게 성공했다	PASS	intense_safe	성공 감탄
+199	강한 긍정 표현	와 이건 인정할 수밖에 없다	PASS	intense_safe	인정 표현
+200	강한 긍정 표현	진짜 역대급이다	PASS	intense_safe	최상급 칭찬
