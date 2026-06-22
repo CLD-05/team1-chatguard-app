@@ -1,7 +1,7 @@
 param(
     [string]$ModelVersion = "unsmile-v1",
     [double]$BlurThreshold = 0.40,
-    [double]$CleanPenalty = 0.05,
+    [double]$CleanPenalty = 0.10,
     [string]$Mode = "real"
 )
 

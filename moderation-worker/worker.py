@@ -27,7 +27,7 @@ MODERATOR_MODE = os.getenv("MODERATOR_MODE", "real").lower()
 UNSMILE_MODEL_ID = os.getenv("UNSMILE_MODEL_ID", "smilegate-ai/kor_unsmile")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "unsmile-v1")
 BLUR_THRESHOLD = float(os.getenv("BLUR_THRESHOLD", "0.40"))
-CLEAN_PENALTY = float(os.getenv("CLEAN_PENALTY", "0.05"))
+CLEAN_PENALTY = float(os.getenv("CLEAN_PENALTY", "0.10"))
 # A-5 런타임 계약: Worker 메트릭 포트는 8000 고정.
 METRICS_PORT = 8000
 

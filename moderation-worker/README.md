@@ -92,7 +92,7 @@ export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL
   DB_URL="jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true" \
   DB_USER=root DB_PASSWORD=chatguard1234 \
   MODERATOR_MODE=real UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile MODEL_VERSION=unsmile-v1 \
-  BLUR_THRESHOLD=0.40 CLEAN_PENALTY=0.05 TOKENIZERS_PARALLELISM=false
+  BLUR_THRESHOLD=0.40 CLEAN_PENALTY=0.10 TOKENIZERS_PARALLELISM=false
 .venv/bin/python worker.py
 ```
 
@@ -113,7 +113,7 @@ MODERATOR_MODE=real
 UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
 MODEL_VERSION=unsmile-v1
 BLUR_THRESHOLD=0.40
-CLEAN_PENALTY=0.05
+CLEAN_PENALTY=0.10
 METRICS_PORT=8000
 ```
 

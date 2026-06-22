@@ -3,7 +3,7 @@ set -euo pipefail
 
 MODEL_VERSION="unsmile-v1"
 BLUR_THRESHOLD="0.40"
-CLEAN_PENALTY="0.05"
+CLEAN_PENALTY="0.10"
 MODE="real"
 
 while [[ $# -gt 0 ]]; do
