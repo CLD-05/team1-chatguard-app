@@ -107,6 +107,7 @@ ROOM_CHANNEL_PREFIX=room:
 DB_URL=jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 DB_USER=root
 DB_PASSWORD=backend/.env 값 사용
+DB_POOL_MAX_CONNECTIONS=5
 
 MODERATOR_MODE=real
 UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
@@ -233,3 +234,8 @@ worker가 실행되지만 검열 결과가 반영되지 않는 경우:
 - `backend/.env`의 `DB_PASSWORD`가 MySQL 컨테이너 비밀번호와 같은지 확인
 - `MOD_QUEUE_KEY`가 백엔드 설정과 같은지 확인
 - worker 터미널에 `inspect message_id=...` 로그가 찍히는지 확인
+
+부하 테스트 중 MySQL connection이 부족한 경우:
+
+- worker는 프로세스마다 최대 `DB_POOL_MAX_CONNECTIONS`개까지 MySQL 연결을 재사용한다.
+- 워커 레플리카 수와 MySQL `max_connections`를 함께 보고 값을 조정한다.

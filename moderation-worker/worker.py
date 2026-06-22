@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pymysql
 import redis
+from dbutils.pooled_db import PooledDB
 from prometheus_client import Counter, Histogram, start_http_server
 
 
@@ -19,6 +20,7 @@ DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=f
 # A-5 env 계약 키만 읽는다(비계약 폴백 DB_USERNAME 제거).
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_POOL_MAX_CONNECTIONS = int(os.getenv("DB_POOL_MAX_CONNECTIONS", "5"))
 
 # A-1 Worker 책임 = 모델 in-process 판정. 기본값은 real(실모델), mock은 명시 설정 시에만.
 MODERATOR_MODE = os.getenv("MODERATOR_MODE", "real").lower()
@@ -61,6 +63,7 @@ WEIGHTS = {
     "악플/욕설": 1.0,
 }
 _classifier = None
+_db_pool = None
 
 JOBS_TOTAL = Counter(
     "moderation_jobs_total",
@@ -207,13 +210,7 @@ def handle_job(raw, redis_client):
 def apply_result_to_db(job, result):
     message_id = job["message_id"]
     checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    connection = pymysql.connect(
-        **parse_db_url(DB_URL),
-        user=DB_USER,
-        password=DB_PASSWORD,
-        charset="utf8mb4",
-        autocommit=False,
-    )
+    connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             if result["action"] == "blur":
@@ -248,6 +245,29 @@ def apply_result_to_db(job, result):
         raise
     finally:
         connection.close()
+
+
+def get_db_connection():
+    return get_db_pool().connection()
+
+
+def get_db_pool():
+    global _db_pool
+    if _db_pool is None:
+        _db_pool = PooledDB(
+            creator=pymysql,
+            maxconnections=DB_POOL_MAX_CONNECTIONS,
+            mincached=1,
+            maxcached=DB_POOL_MAX_CONNECTIONS,
+            blocking=True,
+            ping=1,
+            **parse_db_url(DB_URL),
+            user=DB_USER,
+            password=DB_PASSWORD,
+            charset="utf8mb4",
+            autocommit=False,
+        )
+    return _db_pool
 
 
 def publish_hide(redis_client, room_id, message_id, action):
@@ -312,6 +332,7 @@ def main():
         f"model_version={MODEL_VERSION} "
         f"blur_threshold={BLUR_THRESHOLD:.2f} "
         f"clean_penalty={CLEAN_PENALTY:.2f} "
+        f"db_pool_max_connections={DB_POOL_MAX_CONNECTIONS} "
         f"queue={MOD_QUEUE_KEY} "
         f"redis={REDIS_HOST}:{REDIS_PORT} "
         f"db={DB_URL} "
