@@ -29,8 +29,10 @@ public class RoomPresenceService {
     }
 
     public void leave(Long roomId, Long userId) {
-        redisTemplate.opsForHash().delete(membersKey(roomId), String.valueOf(userId));
-        publishPresenceUpdate(roomId);
+        Long deleted = redisTemplate.opsForHash().delete(membersKey(roomId), String.valueOf(userId));
+        if (deleted != null && deleted > 0) {
+            publishPresenceUpdate(roomId);
+        }
     }
 
     public Map<String, Object> getSnapshot(Long roomId) {
