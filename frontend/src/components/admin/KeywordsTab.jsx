@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getBadWords, addBadWord, deleteBadWord } from '../../api/admin'
 
+const PAGE_SIZE = 10
+
 function Spinner() {
   return (
     <div className="flex justify-center py-12">
@@ -23,7 +25,7 @@ export default function KeywordsTab({ guard }) {
 
   const fetchData = useCallback((pageIndex, keywordToUse) => {
     setLoading(true)
-    guard(getBadWords({ page: pageIndex, size: 10, keyword: keywordToUse }))
+    guard(getBadWords({ page: pageIndex, size: PAGE_SIZE, keyword: keywordToUse }))
       .then((res) => {
         setData(res ?? { content: [], total_pages: 0, total_elements: 0, current_page: 0 })
       })
@@ -39,34 +41,32 @@ export default function KeywordsTab({ guard }) {
   async function handleAdd() {
     const kw = input.trim()
     if (!kw) return
-    await guard(addBadWord(kw))
-      .then(() => {
-        setInput('')
-        setPage(0)
-        setActiveKeyword('')
-        setSearchVal('')
-        setRefreshKey((prev) => prev + 1)
-      })
-      .catch((err) => {
-        alert(err.response?.data?.error?.message || '금칙어 추가에 실패했습니다.')
-      })
+    try {
+      await guard(addBadWord(kw))
+      setInput('')
+      setPage(0)
+      setActiveKeyword('')
+      setSearchVal('')
+      setRefreshKey((prev) => prev + 1)
+    } catch (err) {
+      alert(err.response?.data?.error?.message || '금칙어 추가에 실패했습니다.')
+    }
   }
 
   async function handleRemove(id) {
     if (!confirm('정말로 이 금칙어를 삭제하시겠습니까?')) return
-    await guard(deleteBadWord(id))
-      .then(() => {
-        const isLastItemOnPage = keywords.length === 1
-        const nextPageIndex = (isLastItemOnPage && page > 0) ? page - 1 : page
-        if (nextPageIndex !== page) {
-          setPage(nextPageIndex)
-        } else {
-          setRefreshKey((prev) => prev + 1)
-        }
-      })
-      .catch((err) => {
-        alert(err.response?.data?.error?.message || '금칙어 삭제에 실패했습니다.')
-      })
+    try {
+      await guard(deleteBadWord(id))
+      const isLastItemOnPage = keywords.length === 1
+      const nextPageIndex = (isLastItemOnPage && page > 0) ? page - 1 : page
+      if (nextPageIndex !== page) {
+        setPage(nextPageIndex)
+      } else {
+        setRefreshKey((prev) => prev + 1)
+      }
+    } catch (err) {
+      alert(err.response?.data?.error?.message || '금칙어 삭제에 실패했습니다.')
+    }
   }
 
   function handleSearch() {
@@ -192,7 +192,7 @@ export default function KeywordsTab({ guard }) {
                 <tbody className="divide-y divide-gray-800/50">
                   {keywords.map((kw, idx) => (
                     <tr key={kw.id} className="hover:bg-gray-800/20 transition-colors">
-                      <td className="px-5 py-3 text-xs text-gray-500 font-mono">{page * 10 + idx + 1}</td>
+                      <td className="px-5 py-3 text-xs text-gray-500 font-mono">{page * PAGE_SIZE + idx + 1}</td>
                       <td className="px-4 py-3 text-sm text-gray-200 font-medium truncate">{kw.word}</td>
                       <td className="px-4 py-3 text-xs text-gray-400">{formatDate(kw.created_at)}</td>
                       <td className="px-5 py-3 text-right">
