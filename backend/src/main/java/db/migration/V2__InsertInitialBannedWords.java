@@ -34,7 +34,7 @@ public class V2__InsertInitialBannedWords extends BaseJavaMigration {
         if (bucket == null || key == null) {
             File envFile = new File(".env");
             if (envFile.exists()) {
-                try (BufferedReader envReader = new BufferedReader(new FileReader(envFile))) {
+                try (BufferedReader envReader = new BufferedReader(new FileReader(envFile, StandardCharsets.UTF_8))) {
                     String envLine;
                     while ((envLine = envReader.readLine()) != null) {
                         envLine = envLine.trim();
