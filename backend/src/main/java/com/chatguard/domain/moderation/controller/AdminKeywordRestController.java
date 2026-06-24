@@ -29,7 +29,8 @@ public class AdminKeywordRestController {
             @RequestParam(name = "size", defaultValue = "10") int size,
             @RequestParam(name = "keyword", required = false) String keyword
     ) {
-        Pageable pageable = PageRequest.of(page, size);
+        int safeSize = Math.min(size, 100);
+        Pageable pageable = PageRequest.of(page, safeSize);
         Page<BannedWord> bannedWordPage = adminKeywordService.getBannedWords(keyword, pageable);
         List<BannedWordResponse> responses = bannedWordPage.getContent().stream()
                 .map(BannedWordResponse::from)

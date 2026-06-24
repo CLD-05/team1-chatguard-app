@@ -31,11 +31,6 @@ public class AdminKeywordService {
     private String configChannelPrefix;
 
     @Transactional(readOnly = true)
-    public List<BannedWord> getBannedWords() {
-        return bannedWordRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
     public Page<BannedWord> getBannedWords(String keyword, Pageable pageable) {
         if (keyword != null && !keyword.trim().isEmpty()) {
             return bannedWordRepository.findByWordContaining(keyword.trim(), pageable);

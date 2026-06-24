@@ -16,6 +16,7 @@ export default function KeywordsTab({ guard }) {
   const [input, setInput] = useState('')
   const [searchVal, setSearchVal] = useState('')
   const [activeKeyword, setActiveKeyword] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const totalPages = data.total_pages
   const keywords = data.content
@@ -33,28 +34,39 @@ export default function KeywordsTab({ guard }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData(page, activeKeyword)
-  }, [page, activeKeyword, fetchData])
+  }, [page, activeKeyword, refreshKey, fetchData])
 
   async function handleAdd() {
     const kw = input.trim()
     if (!kw) return
-    await guard(addBadWord(kw)).catch(() => {})
-    setInput('')
-    setPage(0)
-    setActiveKeyword('')
-    setSearchVal('')
-    fetchData(0, '')
+    await guard(addBadWord(kw))
+      .then(() => {
+        setInput('')
+        setPage(0)
+        setActiveKeyword('')
+        setSearchVal('')
+        setRefreshKey((prev) => prev + 1)
+      })
+      .catch((err) => {
+        alert(err.response?.data?.error?.message || '금칙어 추가에 실패했습니다.')
+      })
   }
 
   async function handleRemove(id) {
-    await guard(deleteBadWord(id)).catch(() => {})
-    const isLastItemOnPage = keywords.length === 1
-    const nextPageIndex = (isLastItemOnPage && page > 0) ? page - 1 : page
-    if (nextPageIndex !== page) {
-      setPage(nextPageIndex)
-    } else {
-      fetchData(page, activeKeyword)
-    }
+    if (!confirm('정말로 이 금칙어를 삭제하시겠습니까?')) return
+    await guard(deleteBadWord(id))
+      .then(() => {
+        const isLastItemOnPage = keywords.length === 1
+        const nextPageIndex = (isLastItemOnPage && page > 0) ? page - 1 : page
+        if (nextPageIndex !== page) {
+          setPage(nextPageIndex)
+        } else {
+          setRefreshKey((prev) => prev + 1)
+        }
+      })
+      .catch((err) => {
+        alert(err.response?.data?.error?.message || '금칙어 삭제에 실패했습니다.')
+      })
   }
 
   function handleSearch() {
@@ -171,7 +183,7 @@ export default function KeywordsTab({ guard }) {
                 </colgroup>
                 <thead>
                   <tr className="border-b border-gray-700 text-gray-400 text-xs font-medium uppercase tracking-wider bg-gray-800/40">
-                    <th className="px-5 py-3.5 text-xs text-gray-500 font-normal">번호(ID)</th>
+                    <th className="px-5 py-3.5 text-xs text-gray-500 font-normal">번호</th>
                     <th className="px-4 py-3.5 text-xs text-gray-500 font-normal">금칙어 내용</th>
                     <th className="px-4 py-3.5 text-xs text-gray-500 font-normal">등록일시</th>
                     <th className="px-5 py-3.5 text-xs text-gray-500 font-normal text-right">관리</th>
