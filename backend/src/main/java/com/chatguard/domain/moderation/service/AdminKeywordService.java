@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -29,8 +31,11 @@ public class AdminKeywordService {
     private String configChannelPrefix;
 
     @Transactional(readOnly = true)
-    public List<BannedWord> getBannedWords() {
-        return bannedWordRepository.findAll();
+    public Page<BannedWord> getBannedWords(String keyword, Pageable pageable) {
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            return bannedWordRepository.findByWordContaining(keyword.trim(), pageable);
+        }
+        return bannedWordRepository.findAll(pageable);
     }
 
     @Transactional

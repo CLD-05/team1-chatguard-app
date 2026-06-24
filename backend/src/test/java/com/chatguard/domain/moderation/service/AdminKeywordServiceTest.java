@@ -52,18 +52,36 @@ class AdminKeywordServiceTest {
     }
 
     @Test
-    void 금칙어_전체를_조회한다() {
+    void 금칙어_목록을_페이징_및_검색_없이_조회한다() {
         // Given
         BannedWord word1 = BannedWord.builder().word("bad1").build();
         BannedWord word2 = BannedWord.builder().word("bad2").build();
-        when(bannedWordRepository.findAll()).thenReturn(List.of(word1, word2));
+        List<BannedWord> content = List.of(word1, word2);
+        org.springframework.data.domain.Page<BannedWord> page = new org.springframework.data.domain.PageImpl<>(content, org.springframework.data.domain.PageRequest.of(0, 10), content.size());
+        when(bannedWordRepository.findAll(any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
 
         // When
-        List<BannedWord> result = adminKeywordService.getBannedWords();
+        org.springframework.data.domain.Page<BannedWord> result = adminKeywordService.getBannedWords(null, org.springframework.data.domain.PageRequest.of(0, 10));
 
         // Then
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getWord()).isEqualTo("bad1");
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getWord()).isEqualTo("bad1");
+    }
+
+    @Test
+    void 금칙어_목록을_검색어와_함께_페이징_조회한다() {
+        // Given
+        BannedWord word1 = BannedWord.builder().word("bad1").build();
+        List<BannedWord> content = List.of(word1);
+        org.springframework.data.domain.Page<BannedWord> page = new org.springframework.data.domain.PageImpl<>(content, org.springframework.data.domain.PageRequest.of(0, 10), content.size());
+        when(bannedWordRepository.findByWordContaining(eq("bad"), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+
+        // When
+        org.springframework.data.domain.Page<BannedWord> result = adminKeywordService.getBannedWords("bad", org.springframework.data.domain.PageRequest.of(0, 10));
+
+        // Then
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getWord()).isEqualTo("bad1");
     }
 
     @Test

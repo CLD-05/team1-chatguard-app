@@ -4,6 +4,10 @@ import com.chatguard.domain.moderation.entity.BannedWord;
 import com.chatguard.domain.moderation.service.AdminKeywordService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -23,22 +27,53 @@ class AdminKeywordRestControllerTest {
     }
 
     @Test
-    void 금칙어_목록을_조회하여_Response로_변환한다() {
+    void 금칙어_목록을_페이징_및_검색_조회하여_Response로_변환한다() {
         // Given
         BannedWord word1 = BannedWord.builder().word("bad1").build();
         BannedWord word2 = BannedWord.builder().word("bad2").build();
-        when(adminKeywordService.getBannedWords()).thenReturn(List.of(word1, word2));
+        List<BannedWord> content = List.of(word1, word2);
+        Page<BannedWord> pageResult = new PageImpl<>(content, PageRequest.of(0, 10), content.size());
+
+        when(adminKeywordService.getBannedWords(eq("bad"), any(Pageable.class))).thenReturn(pageResult);
 
         // When
-        ResponseEntity<List<AdminKeywordRestController.BannedWordResponse>> responseEntity =
-                adminKeywordRestController.getKeywords();
+        ResponseEntity<AdminKeywordRestController.BannedWordPageResponse> responseEntity =
+                adminKeywordRestController.getKeywords(0, 10, "bad");
 
         // Then
         assertThat(responseEntity.getStatusCode().is2xxSuccessful()).isTrue();
-        List<AdminKeywordRestController.BannedWordResponse> body = responseEntity.getBody();
-        assertThat(body).hasSize(2);
-        assertThat(body.get(0).getWord()).isEqualTo("bad1");
-        assertThat(body.get(1).getWord()).isEqualTo("bad2");
+        AdminKeywordRestController.BannedWordPageResponse body = responseEntity.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getContent()).hasSize(2);
+        assertThat(body.getContent().get(0).getWord()).isEqualTo("bad1");
+        assertThat(body.getContent().get(1).getWord()).isEqualTo("bad2");
+        assertThat(body.getTotalPages()).isEqualTo(1);
+        assertThat(body.getTotalElements()).isEqualTo(2);
+        assertThat(body.getCurrentPage()).isEqualTo(0);
+    }
+
+    @Test
+    void 검색어_없이_금칙어_목록을_페이징_조회하여_Response로_변환한다() {
+        // Given
+        BannedWord word1 = BannedWord.builder().word("bad1").build();
+        BannedWord word2 = BannedWord.builder().word("bad2").build();
+        List<BannedWord> content = List.of(word1, word2);
+        Page<BannedWord> pageResult = new PageImpl<>(content, PageRequest.of(0, 10), content.size());
+
+        when(adminKeywordService.getBannedWords(isNull(), any(Pageable.class))).thenReturn(pageResult);
+
+        // When
+        ResponseEntity<AdminKeywordRestController.BannedWordPageResponse> responseEntity =
+                adminKeywordRestController.getKeywords(0, 10, null);
+
+        // Then
+        assertThat(responseEntity.getStatusCode().is2xxSuccessful()).isTrue();
+        AdminKeywordRestController.BannedWordPageResponse body = responseEntity.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getContent()).hasSize(2);
+        assertThat(body.getTotalPages()).isEqualTo(1);
+        assertThat(body.getTotalElements()).isEqualTo(2);
+        assertThat(body.getCurrentPage()).isEqualTo(0);
     }
 
     @Test
