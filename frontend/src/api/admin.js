@@ -6,8 +6,8 @@ export const getStats = () =>
 export const getLogs = ({ stage, verdict, before, limit = 50 } = {}) =>
   api.get('/admin/moderation-logs', { params: { stage, verdict, before, limit } }).then((r) => r.data)
 
-export const getBadWords = () =>
-  api.get('/admin/keywords').then((r) => r.data)
+export const getBadWords = ({ page, size, keyword } = {}) =>
+  api.get('/admin/keywords', { params: { page, size, keyword } }).then((r) => r.data)
 
 export const addBadWord = (word) =>
   api.post('/admin/keywords', { word }).then((r) => r.data)

@@ -1,54 +1,249 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getBadWords, addBadWord, deleteBadWord } from '../../api/admin'
 
+function Spinner() {
+  return (
+    <div className="flex justify-center py-12">
+      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
 export default function KeywordsTab({ guard }) {
-  const [keywords, setKeywords] = useState([])
+  const [data, setData] = useState({ content: [], total_pages: 0, total_elements: 0, current_page: 0 })
+  const [page, setPage] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
+  const [searchVal, setSearchVal] = useState('')
+  const [activeKeyword, setActiveKeyword] = useState('')
+
+  const totalPages = data.total_pages
+  const keywords = data.content
+
+  const fetchData = useCallback((pageIndex, keywordToUse) => {
+    setLoading(true)
+    guard(getBadWords({ page: pageIndex, size: 10, keyword: keywordToUse }))
+      .then((res) => {
+        setData(res ?? { content: [], total_pages: 0, total_elements: 0, current_page: 0 })
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [guard])
 
   useEffect(() => {
-    guard(getBadWords()).then(setKeywords).catch(() => {})
-  }, [guard])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchData(page, activeKeyword)
+  }, [page, activeKeyword, fetchData])
 
   async function handleAdd() {
     const kw = input.trim()
     if (!kw) return
     await guard(addBadWord(kw)).catch(() => {})
     setInput('')
-    guard(getBadWords()).then(setKeywords).catch(() => {})
+    setPage(0)
+    setActiveKeyword('')
+    setSearchVal('')
+    fetchData(0, '')
   }
 
   async function handleRemove(id) {
     await guard(deleteBadWord(id)).catch(() => {})
-    guard(getBadWords()).then(setKeywords).catch(() => {})
+    const isLastItemOnPage = keywords.length === 1
+    const nextPageIndex = (isLastItemOnPage && page > 0) ? page - 1 : page
+    if (nextPageIndex !== page) {
+      setPage(nextPageIndex)
+    } else {
+      fetchData(page, activeKeyword)
+    }
+  }
+
+  function handleSearch() {
+    setPage(0)
+    setActiveKeyword(searchVal)
+  }
+
+  function handleClearSearch() {
+    setSearchVal('')
+    setPage(0)
+    setActiveKeyword('')
+  }
+
+  const getPageNumbers = () => {
+    const numbers = []
+    const maxButtons = 5
+    let start = Math.max(0, page - 2)
+    let end = Math.min(totalPages - 1, start + maxButtons - 1)
+
+    if (end - start < maxButtons - 1) {
+      start = Math.max(0, end - maxButtons + 1)
+    }
+
+    for (let i = start; i <= end; i++) {
+      numbers.push(i)
+    }
+    return numbers
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—'
+    const date = new Date(dateStr)
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
   }
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-      <p className="text-sm font-medium text-white mb-3">전역 금칙어 목록</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+        <div>
+          <h3 className="text-sm font-semibold text-white">전역 금칙어 관리</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            등록된 금칙어가 포함된 메시지는 1차적으로 자동 차단됩니다. (전체 {data.total_elements}건)
+          </p>
+        </div>
 
-      <div className="flex flex-wrap gap-2 mb-4 min-h-[36px]">
-        {keywords.map((kw) => (
-          <span key={kw.id ?? kw.word} className="flex items-center gap-1.5 bg-gray-700 text-gray-200 text-xs px-3 py-1.5 rounded-full">
-            {kw.word ?? kw}
-            <button onClick={() => handleRemove(kw.id)} className="text-gray-400 hover:text-red-400 transition-colors leading-none">✕</button>
-          </span>
-        ))}
-        {keywords.length === 0 && <span className="text-gray-500 text-xs self-center">금칙어가 없습니다.</span>}
+        {/* Search & Add controls */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* Add Form */}
+          <div className="flex w-full sm:w-auto gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              placeholder="새 금칙어 추가..."
+              className="w-full sm:w-44 bg-gray-900 border border-gray-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder-gray-600"
+            />
+            <button
+              onClick={handleAdd}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+            >
+              추가
+            </button>
+          </div>
+
+          {/* Search Form */}
+          <div className="flex w-full sm:w-auto gap-2">
+            <div className="relative w-full sm:w-48">
+              <input
+                value={searchVal}
+                onChange={(e) => setSearchVal(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="금칙어 검색..."
+                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:border-indigo-500 placeholder-gray-600"
+              />
+              {activeKeyword && (
+                <button
+                  onClick={handleClearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleSearch}
+              className="px-3.5 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+            >
+              검색
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          placeholder="금칙어 추가..."
-          className="flex-1 bg-gray-900 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 placeholder-gray-600"
-        />
-        <button onClick={handleAdd}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors">
-          추가
-        </button>
-      </div>
+      {loading ? (
+        <Spinner />
+      ) : (
+        <>
+          <div className="bg-gray-900 border border-gray-700/60 rounded-xl overflow-hidden mb-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm table-fixed text-left">
+                <colgroup>
+                  <col className="w-[15%]" />
+                  <col className="w-[45%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[15%]" />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-gray-700 text-gray-400 text-xs font-medium uppercase tracking-wider bg-gray-800/40">
+                    <th className="px-5 py-3.5 text-xs text-gray-500 font-normal">번호(ID)</th>
+                    <th className="px-4 py-3.5 text-xs text-gray-500 font-normal">금칙어 내용</th>
+                    <th className="px-4 py-3.5 text-xs text-gray-500 font-normal">등록일시</th>
+                    <th className="px-5 py-3.5 text-xs text-gray-500 font-normal text-right">관리</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/50">
+                  {keywords.map((kw, idx) => (
+                    <tr key={kw.id} className="hover:bg-gray-800/20 transition-colors">
+                      <td className="px-5 py-3 text-xs text-gray-500 font-mono">{page * 10 + idx + 1}</td>
+                      <td className="px-4 py-3 text-sm text-gray-200 font-medium truncate">{kw.word}</td>
+                      <td className="px-4 py-3 text-xs text-gray-400">{formatDate(kw.created_at)}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => handleRemove(kw.id)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          title="금칙어 삭제"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {keywords.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-12 text-center text-gray-500 text-xs">
+                        {activeKeyword ? '검색 결과와 일치하는 금칙어가 없습니다.' : '등록된 금칙어가 없습니다.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-1.5 mt-4">
+              <button
+                disabled={page === 0}
+                onClick={() => setPage(page - 1)}
+                className="w-8 h-8 flex items-center justify-center border border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                title="이전 페이지"
+              >
+                ◀
+              </button>
+
+              {getPageNumbers().map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-lg border transition-all ${
+                    p === page
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                      : 'border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  {p + 1}
+                </button>
+              ))}
+
+              <button
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage(page + 1)}
+                className="w-8 h-8 flex items-center justify-center border border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                title="다음 페이지"
+              >
+                ▶
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
