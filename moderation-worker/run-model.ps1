@@ -2,7 +2,8 @@ param(
     [string]$ModelVersion = "unsmile-weighted-v1",
     [double]$BlurThreshold = 0.40,
     [double]$CleanPenalty = 0.10,
-    [string]$Mode = "real"
+    [string]$Mode = "real",
+    [switch]$NoWarmup
 )
 
 $ErrorActionPreference = "Stop"
@@ -55,6 +56,7 @@ $env:UNSMILE_MODEL_ID = if ($env:UNSMILE_MODEL_ID) { $env:UNSMILE_MODEL_ID } els
 $env:MODEL_VERSION = $ModelVersion
 $env:BLUR_THRESHOLD = $BlurThreshold.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
 $env:CLEAN_PENALTY = $CleanPenalty.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
+$env:UNSMILE_WARMUP_ENABLED = if ($NoWarmup) { "false" } else { "true" }
 $env:METRICS_PORT = if ($env:METRICS_PORT) { $env:METRICS_PORT } else { "8000" }
 
 Write-Host "Starting ChatGuard moderation worker"
@@ -63,6 +65,7 @@ Write-Host "  model: $env:UNSMILE_MODEL_ID"
 Write-Host "  model_version: $env:MODEL_VERSION"
 Write-Host "  blur_threshold: $env:BLUR_THRESHOLD"
 Write-Host "  clean_penalty: $env:CLEAN_PENALTY"
+Write-Host "  warmup_enabled: $env:UNSMILE_WARMUP_ENABLED"
 Write-Host "  redis: $env:REDIS_HOST`:$env:REDIS_PORT / $env:MOD_QUEUE_KEY"
 Write-Host "  db: $env:DB_URL"
 Write-Host "  metrics: http://localhost:$env:METRICS_PORT/metrics"
