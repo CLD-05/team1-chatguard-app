@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,7 +31,7 @@ public class AdminKeywordRestController {
             @RequestParam(name = "keyword", required = false) String keyword
     ) {
         int safeSize = Math.min(size, 100);
-        Pageable pageable = PageRequest.of(page, safeSize);
+        Pageable pageable = PageRequest.of(page, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<BannedWord> bannedWordPage = adminKeywordService.getBannedWords(keyword, pageable);
         List<BannedWordResponse> responses = bannedWordPage.getContent().stream()
                 .map(BannedWordResponse::from)

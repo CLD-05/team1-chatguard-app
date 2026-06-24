@@ -57,6 +57,8 @@ public class V2__InsertInitialBannedWords extends BaseJavaMigration {
                                 key = value;
                             } else if ("AWS_REGION".equals(name)) {
                                 region = value;
+                            } else if ("AWS_PROFILE".equals(name)) {
+                                System.setProperty("aws.profile", value);
                             }
                         }
                     }
