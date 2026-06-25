@@ -365,7 +365,10 @@ def main():
         f"metrics_port={METRICS_PORT}"
     )
 
-    warm_up_unsmile_model()
+    try:
+        warm_up_unsmile_model()
+    except Exception as exc:
+        log(f"warm-up failed (non-fatal): {exc}")
 
     while not _shutdown_requested:
         raw = None
