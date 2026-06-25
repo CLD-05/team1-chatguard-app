@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 import time
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
@@ -67,6 +68,7 @@ WEIGHTS = {
 }
 _classifier = None
 _db_pool = None
+_shutdown_requested = False
 
 JOBS_TOTAL = Counter(
     "moderation_jobs_total",
@@ -90,6 +92,13 @@ E2E_SECONDS = Histogram(
 def log(message):
     now = datetime.now(timezone.utc).isoformat()
     print(f"[{now}] {message}", flush=True)
+
+
+def request_shutdown(signum, _frame):
+    global _shutdown_requested
+    if not _shutdown_requested:
+        log(f"shutdown requested signal={signum}; will stop after current job")
+    _shutdown_requested = True
 
 
 def classify(content):
@@ -331,6 +340,9 @@ def requeue_job(redis_client, raw):
 
 
 def main():
+    signal.signal(signal.SIGTERM, request_shutdown)
+    signal.signal(signal.SIGINT, request_shutdown)
+
     start_http_server(METRICS_PORT)
     redis_client = redis.Redis(
         host=REDIS_HOST,
@@ -355,7 +367,7 @@ def main():
 
     warm_up_unsmile_model()
 
-    while True:
+    while not _shutdown_requested:
         raw = None
         try:
             item = redis_client.brpop(MOD_QUEUE_KEY, timeout=5)
@@ -367,9 +379,13 @@ def main():
             if raw is not None:
                 requeue_job(redis_client, raw)
             log(f"temporary error: {exc}")
+            if _shutdown_requested:
+                break
             time.sleep(2)
         except Exception as exc:
             log(f"job error: {exc}")
+
+    log("worker stopped")
 
 
 if __name__ == "__main__":
