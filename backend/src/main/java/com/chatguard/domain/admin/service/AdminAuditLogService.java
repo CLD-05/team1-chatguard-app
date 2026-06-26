@@ -2,6 +2,7 @@ package com.chatguard.domain.admin.service;
 
 import com.chatguard.domain.admin.entity.AdminAuditLog;
 import com.chatguard.domain.admin.repository.AdminAuditLogRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminAuditLogService {
 
     private final AdminAuditLogRepository adminAuditLogRepository;
+    private final MeterRegistry meterRegistry;
 
     @Async
     @Transactional
@@ -30,6 +32,11 @@ public class AdminAuditLogService {
             log.debug("Successfully saved admin audit log asynchronously: action={}, adminId={}", action, adminId);
         } catch (Exception e) {
             log.error("Failed to save admin audit log asynchronously", e);
+            try {
+                meterRegistry.counter("admin_audit_log_save_errors_total").increment();
+            } catch (Exception me) {
+                log.error("Failed to increment error metric counter", me);
+            }
         }
     }
 }

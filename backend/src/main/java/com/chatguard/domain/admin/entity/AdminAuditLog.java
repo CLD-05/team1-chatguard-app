@@ -31,7 +31,7 @@ public class AdminAuditLog {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
     @PrePersist

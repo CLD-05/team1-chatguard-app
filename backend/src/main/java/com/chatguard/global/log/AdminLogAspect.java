@@ -14,8 +14,6 @@ import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
@@ -33,7 +31,7 @@ public class AdminLogAspect {
 
     @Around("@annotation(adminLog)")
     public Object logAdminAction(ProceedingJoinPoint joinPoint, AdminLog adminLog) throws Throwable {
-        // 1. 현재 어드민 식별 (SecurityContext -> AuthContext ThreadLocal 폴백)
+        // 1. 현재 어드민 식별 (AuthContext ThreadLocal 및 DB 조회 연동)
         String adminId = resolveAdminId();
 
         // 2. 비즈니스 로직 실행
@@ -51,20 +49,12 @@ public class AdminLogAspect {
     }
 
     private String resolveAdminId() {
-        // 1순위: SecurityContextHolder
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return authentication.getName();
-        }
-
-        // 2순위: AuthContext (ThreadLocal) 기반 사용자 ID 추출 및 DB 조회 폴백
         Long userId = AuthContext.getUserId();
         if (userId != null) {
             return userRepository.findById(userId)
                     .map(User::getUsername)
                     .orElse("USER_ID_" + userId);
         }
-
         return "SYSTEM";
     }
 
@@ -148,7 +138,16 @@ public class AdminLogAspect {
                     continue;
                 }
 
-                sb.append("[").append(paramName).append("=").append(arg).append("] ");
+                // 민감 파라미터 마스킹 처리 (password, token, secret, credential, key)
+                Object displayValue = arg;
+                String lowerParam = paramName.toLowerCase();
+                if (lowerParam.contains("password") || lowerParam.contains("token") ||
+                        lowerParam.contains("secret") || lowerParam.contains("credential") ||
+                        lowerParam.contains("key")) {
+                    displayValue = "******";
+                }
+
+                sb.append("[").append(paramName).append("=").append(displayValue).append("] ");
             }
         }
 

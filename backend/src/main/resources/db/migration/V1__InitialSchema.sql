@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     action VARCHAR(100) NOT NULL,
     resource_id VARCHAR(255),
     description TEXT,
-    created_at DATETIME NOT NULL
+    created_at DATETIME(6) NOT NULL
 );
 
 CREATE INDEX idx_admin_audit_logs_admin_id ON admin_audit_logs (admin_id);
