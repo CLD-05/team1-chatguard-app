@@ -102,6 +102,11 @@ export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL
 REDIS_HOST=localhost
 REDIS_PORT=6379
 MOD_QUEUE_KEY=mod:queue
+PROCESSING_QUEUE_KEY=mod:queue:processing
+DLQ_QUEUE_KEY=mod:queue:dlq
+MAX_RETRY_COUNT=3
+PROCESSING_TIMEOUT_SECONDS=300
+RECOVER_PROCESSING_ON_STARTUP=true
 ROOM_CHANNEL_PREFIX=room:
 
 DB_URL=jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
@@ -155,6 +160,9 @@ curl -s http://localhost:8000/metrics | grep moderation_jobs_total
 - `moderation_inference_seconds`
 - `moderation_queue_wait_seconds`
 - `moderation_e2e_seconds`
+- `moderation_retries_total`
+- `moderation_dlq_total`
+- `moderation_recovered_processing_total`
 
 ## DB 결과 확인
 

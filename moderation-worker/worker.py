@@ -1,6 +1,7 @@
 import json
 import os
 import signal
+import socket
 import time
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
@@ -16,6 +17,12 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 # A-5 env 계약 키만 읽는다(비계약 폴백 REDIS_QUEUE_NAME 제거).
 MOD_QUEUE_KEY = os.getenv("MOD_QUEUE_KEY", "mod:queue")
+PROCESSING_QUEUE_KEY = os.getenv("PROCESSING_QUEUE_KEY", f"{MOD_QUEUE_KEY}:processing")
+DLQ_QUEUE_KEY = os.getenv("DLQ_QUEUE_KEY", f"{MOD_QUEUE_KEY}:dlq")
+MAX_RETRY_COUNT = int(os.getenv("MAX_RETRY_COUNT", "3"))
+PROCESSING_TIMEOUT_SECONDS = int(os.getenv("PROCESSING_TIMEOUT_SECONDS", "300"))
+RECOVER_PROCESSING_ON_STARTUP = os.getenv("RECOVER_PROCESSING_ON_STARTUP", "true").lower() == "true"
+WORKER_ID = os.getenv("WORKER_ID", socket.gethostname())
 ROOM_CHANNEL_PREFIX = os.getenv("ROOM_CHANNEL_PREFIX", "room:")
 
 DB_URL = os.getenv("DB_URL", "jdbc:mysql://localhost:3306/chatguard_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true")
@@ -86,6 +93,18 @@ QUEUE_WAIT_SECONDS = Histogram(
 E2E_SECONDS = Histogram(
     "moderation_e2e_seconds",
     "Time between queue enqueue and moderation.hide publish for blocked jobs.",
+)
+RETRIES_TOTAL = Counter(
+    "moderation_retries_total",
+    "Total moderation jobs requeued after temporary failures.",
+)
+DLQ_TOTAL = Counter(
+    "moderation_dlq_total",
+    "Total moderation jobs moved to dead letter queue.",
+)
+RECOVERED_TOTAL = Counter(
+    "moderation_recovered_processing_total",
+    "Total stale processing jobs recovered to the main queue.",
 )
 
 
@@ -334,9 +353,105 @@ def parse_enqueued_at(value):
         return None
 
 
-def requeue_job(redis_client, raw):
-    redis_client.lpush(MOD_QUEUE_KEY, raw)
-    log("requeued moderation job after temporary failure")
+def claim_processing_job(redis_client, raw):
+    job = decode_job_for_queue(raw)
+    job["processing_started_at"] = datetime.now(timezone.utc).isoformat()
+    job["worker_id"] = WORKER_ID
+    claimed_raw = json.dumps(job, ensure_ascii=False)
+
+    pipe = redis_client.pipeline()
+    pipe.lpush(PROCESSING_QUEUE_KEY, claimed_raw)
+    pipe.lrem(PROCESSING_QUEUE_KEY, 1, raw)
+    _, removed = pipe.execute()
+    if removed == 0:
+        log("processing claim left original job because it was not found")
+    return claimed_raw
+
+
+def decode_job_for_queue(raw):
+    try:
+        job = json.loads(raw)
+        if isinstance(job, dict):
+            return job
+    except json.JSONDecodeError:
+        pass
+    return {"raw": raw}
+
+
+def cleanup_processing_fields(job):
+    job.pop("processing_started_at", None)
+    job.pop("worker_id", None)
+    return job
+
+
+def recover_stale_processing_jobs(redis_client):
+    if not RECOVER_PROCESSING_ON_STARTUP:
+        return
+
+    now = time.time()
+    recovered = 0
+    for raw in redis_client.lrange(PROCESSING_QUEUE_KEY, 0, -1):
+        job = decode_job_for_queue(raw)
+        started_at = parse_enqueued_at(job.get("processing_started_at"))
+        if started_at is not None and now - started_at < PROCESSING_TIMEOUT_SECONDS:
+            continue
+
+        payload = json.dumps(cleanup_processing_fields(job), ensure_ascii=False)
+        removed = redis_client.lrem(PROCESSING_QUEUE_KEY, 1, raw)
+        if removed:
+            redis_client.lpush(MOD_QUEUE_KEY, payload)
+            recovered += 1
+
+    if recovered:
+        RECOVERED_TOTAL.inc(recovered)
+        log(f"recovered stale processing jobs count={recovered}")
+
+
+def ack_processing_job(redis_client, raw):
+    removed = redis_client.lrem(PROCESSING_QUEUE_KEY, 1, raw)
+    if removed == 0:
+        log("processing ack skipped because job was not found")
+
+
+def build_failed_job(raw, exc):
+    job = cleanup_processing_fields(decode_job_for_queue(raw))
+
+    try:
+        retry_count = int(job.get("retry_count", 0)) + 1
+    except (TypeError, ValueError):
+        retry_count = 1
+
+    job["retry_count"] = retry_count
+    job["last_error"] = str(exc)
+    job["failed_at"] = datetime.now(timezone.utc).isoformat()
+    return job, retry_count
+
+
+def retry_or_dlq_job(redis_client, raw, exc):
+    failed_job, retry_count = build_failed_job(raw, exc)
+    payload = json.dumps(failed_job, ensure_ascii=False)
+    message_id = failed_job.get("message_id", "unknown")
+
+    if retry_count >= MAX_RETRY_COUNT:
+        redis_client.lpush(DLQ_QUEUE_KEY, payload)
+        ack_processing_job(redis_client, raw)
+        DLQ_TOTAL.inc()
+        log(
+            "moved moderation job to dlq "
+            f"message_id={message_id} "
+            f"retry_count={retry_count} "
+            f"dlq={DLQ_QUEUE_KEY}"
+        )
+        return
+
+    redis_client.lpush(MOD_QUEUE_KEY, payload)
+    ack_processing_job(redis_client, raw)
+    RETRIES_TOTAL.inc()
+    log(
+        "requeued moderation job after failure "
+        f"message_id={message_id} "
+        f"retry_count={retry_count}/{MAX_RETRY_COUNT}"
+    )
 
 
 def main():
@@ -360,6 +475,12 @@ def main():
         f"warmup_enabled={UNSMILE_WARMUP_ENABLED} "
         f"db_pool_max_connections={DB_POOL_MAX_CONNECTIONS} "
         f"queue={MOD_QUEUE_KEY} "
+        f"processing_queue={PROCESSING_QUEUE_KEY} "
+        f"dlq={DLQ_QUEUE_KEY} "
+        f"max_retry_count={MAX_RETRY_COUNT} "
+        f"processing_timeout_seconds={PROCESSING_TIMEOUT_SECONDS} "
+        f"recover_processing_on_startup={RECOVER_PROCESSING_ON_STARTUP} "
+        f"worker_id={WORKER_ID} "
         f"redis={REDIS_HOST}:{REDIS_PORT} "
         f"db={DB_URL} "
         f"metrics_port={METRICS_PORT}"
@@ -370,22 +491,27 @@ def main():
     except Exception as exc:
         log(f"warm-up failed (non-fatal): {exc}")
 
+    recover_stale_processing_jobs(redis_client)
+
     while not _shutdown_requested:
         raw = None
         try:
-            item = redis_client.brpop(MOD_QUEUE_KEY, timeout=5)
-            if item is None:
+            raw = redis_client.brpoplpush(MOD_QUEUE_KEY, PROCESSING_QUEUE_KEY, timeout=5)
+            if raw is None:
                 continue
-            _, raw = item
+            raw = claim_processing_job(redis_client, raw)
             handle_job(raw, redis_client)
+            ack_processing_job(redis_client, raw)
         except (redis.RedisError, pymysql.MySQLError, TimeoutError, OSError) as exc:
             if raw is not None:
-                requeue_job(redis_client, raw)
+                retry_or_dlq_job(redis_client, raw, exc)
             log(f"temporary error: {exc}")
             if _shutdown_requested:
                 break
             time.sleep(2)
         except Exception as exc:
+            if raw is not None:
+                retry_or_dlq_job(redis_client, raw, exc)
             log(f"job error: {exc}")
 
     log("worker stopped")
