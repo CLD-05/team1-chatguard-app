@@ -112,7 +112,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ needs.update-config.result == 'success' && '✅' || '❌' }} *[Deploy] ${{ github.repository }}*\n브랜치: `${{ github.ref_name }}`\n작업자: ${{ github.actor }}\n커밋: ${{ github.event.head_commit.message }}\n빌드: ${{ needs['build-push'].result }} / 배포: ${{ needs['update-config'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              "text": "${{ needs.update-config.result == 'success' && '✅' || '❌' }} *[Deploy] ${{ github.repository }}*\n브랜치: `${{ github.ref_name }}`\n작업자: ${{ github.actor }}\n빌드: ${{ needs['build-push'].result }} / 배포: ${{ needs['update-config'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOY_URL }}

@@ -58,7 +58,7 @@ jobs:
   notify:
     name: Slack 알림
     needs: [claude]
-    if: always()
+    if: always() && needs.claude.result != 'skipped'
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack
