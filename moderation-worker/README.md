@@ -119,7 +119,8 @@ UNSMILE_MODEL_ID=smilegate-ai/kor_unsmile
 MODEL_VERSION=unsmile-weighted-v1
 BLUR_THRESHOLD=0.40
 CLEAN_PENALTY=0.10
-METRICS_PORT=8000
+
+# Worker metrics port is fixed at 8000. Env override is not supported.
 ```
 
 다른 값을 쓰려면 실행 전에 환경변수를 먼저 지정한다.

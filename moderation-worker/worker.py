@@ -364,7 +364,8 @@ def claim_processing_job(redis_client, raw):
     pipe.lrem(PROCESSING_QUEUE_KEY, 1, raw)
     _, removed = pipe.execute()
     if removed == 0:
-        log("processing claim left original job because it was not found")
+        redis_client.lrem(PROCESSING_QUEUE_KEY, 1, claimed_raw)
+        raise RuntimeError("failed to claim processing job")
     return claimed_raw
 
 
