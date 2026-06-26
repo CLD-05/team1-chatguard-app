@@ -69,6 +69,6 @@ jobs:
               "text": "${{ needs.claude.result == 'success' && '✅' || '❌' }} *[Claude Review] ${{ github.repository }}*\nPR: #${{ github.event.issue.number || github.event.pull_request.number }}\n작업자: ${{ github.actor }}\n상태: ${{ needs.claude.result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_CI_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
