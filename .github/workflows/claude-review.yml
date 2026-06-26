@@ -54,3 +54,21 @@ jobs:
             --max-turns 40
             --model claude-sonnet-4-6
             --append-system-prompt "응답을 시작하기 전에 반드시 _context/prompts/review-app.md 를 읽고, 그 문서를 이 PR 리뷰의 역할·컨텍스트 로딩 규칙·체크리스트·출력 형식으로 그대로 따른다. 해당 파일이 존재하지 않으면 리뷰를 진행하지 말고 'context repo 의 prompts/review-app.md 를 찾을 수 없어 리뷰를 중단합니다'라고만 코멘트한다. 한국어로 답한다."
+
+  notify:
+    name: Slack 알림
+    needs: [claude]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0  # v1.27.0
+        with:
+          payload: |
+            {
+              "text": "${{ needs.claude.result == 'success' && '✅' || '❌' }} *[Claude Review] ${{ github.repository }}*\nPR: #${{ github.event.issue.number || github.event.pull_request.number }}\n작업자: ${{ github.actor }}\n상태: ${{ needs.claude.result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_CI_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
