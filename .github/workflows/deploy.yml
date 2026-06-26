@@ -110,18 +110,10 @@ jobs:
       - name: Notify Slack
         uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0  # v1.27.0
         with:
-          payload-templated: true
           payload: |
             {
-              "text": "$STATUS *[Deploy] $REPO*\n브랜치: `$BRANCH`\n작업자: $ACTOR\n빌드: $BUILD / 배포: $DEPLOY\n링크: $URL"
+              "text": "${{ needs.update-config.result == 'success' && '✅' || '❌' }} *[Deploy] ${{ github.repository }}*\n브랜치: `${{ github.ref_name }}`\n작업자: ${{ github.actor }}\n빌드: ${{ needs['build-push'].result }} / 배포: ${{ needs['update-config'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOY_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-          STATUS: ${{ needs.update-config.result == 'success' && '✅' || '❌' }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref_name }}
-          ACTOR: ${{ github.actor }}
-          BUILD: ${{ needs['build-push'].result }}
-          DEPLOY: ${{ needs['update-config'].result }}
-          URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

@@ -64,18 +64,11 @@ jobs:
       - name: Notify Slack
         uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0  # v1.27.0
         with:
-          payload-templated: true
           payload: |
             {
-              "text": "$STATUS *[Claude Review] $REPO*\nPR: #$PR_NUMBER\n작업자: $ACTOR\n상태: $RESULT\n링크: $URL"
+              "text": "${{ needs.claude.result == 'success' && '✅' || '❌' }} *[Claude Review] ${{ github.repository }}*\nPR: #${{ github.event.issue.number || github.event.pull_request.number }}\n작업자: ${{ github.actor }}\n상태: ${{ needs.claude.result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_CI_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-          STATUS: ${{ needs.claude.result == 'success' && '✅' || '❌' }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
-          ACTOR: ${{ github.actor }}
-          RESULT: ${{ needs.claude.result }}
-          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
