@@ -1,11 +1,13 @@
 import json
 import os
+import signal
 import time
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pymysql
 import redis
+import torch
 from dbutils.pooled_db import PooledDB
 from prometheus_client import Counter, Histogram, start_http_server
 
@@ -25,9 +27,11 @@ DB_POOL_MAX_CONNECTIONS = int(os.getenv("DB_POOL_MAX_CONNECTIONS", "5"))
 # A-1 Worker 책임 = 모델 in-process 판정. 기본값은 real(실모델), mock은 명시 설정 시에만.
 MODERATOR_MODE = os.getenv("MODERATOR_MODE", "real").lower()
 UNSMILE_MODEL_ID = os.getenv("UNSMILE_MODEL_ID", "smilegate-ai/kor_unsmile")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "unsmile-v1")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "unsmile-weighted-v1")
 BLUR_THRESHOLD = float(os.getenv("BLUR_THRESHOLD", "0.40"))
 CLEAN_PENALTY = float(os.getenv("CLEAN_PENALTY", "0.10"))
+UNSMILE_WARMUP_ENABLED = os.getenv("UNSMILE_WARMUP_ENABLED", "true").lower() == "true"
+UNSMILE_WARMUP_TEXT = os.getenv("UNSMILE_WARMUP_TEXT", "warmup message")
 # A-5 런타임 계약: Worker 메트릭 포트는 8000 고정.
 METRICS_PORT = 8000
 
@@ -64,6 +68,7 @@ WEIGHTS = {
 }
 _classifier = None
 _db_pool = None
+_shutdown_requested = False
 
 JOBS_TOTAL = Counter(
     "moderation_jobs_total",
@@ -87,6 +92,13 @@ E2E_SECONDS = Histogram(
 def log(message):
     now = datetime.now(timezone.utc).isoformat()
     print(f"[{now}] {message}", flush=True)
+
+
+def request_shutdown(signum, _frame):
+    global _shutdown_requested
+    if not _shutdown_requested:
+        log(f"shutdown requested signal={signum}; will stop after current job")
+    _shutdown_requested = True
 
 
 def classify(content):
@@ -118,13 +130,23 @@ def classify_with_unsmile(content):
         _classifier = pipeline("text-classification", model=UNSMILE_MODEL_ID, top_k=None)
         log("loaded unsmile model")
 
-    raw_result = _classifier(content)
+    with torch.inference_mode():
+        raw_result = _classifier(content)
     final_score, top_label = extract_toxic_score(raw_result)
     return build_result(
         final_score,
         MODEL_VERSION,
         f"unsmile_weighted:{top_label}={final_score:.3f}",
     )
+
+
+def warm_up_unsmile_model():
+    if MODERATOR_MODE == "mock" or not UNSMILE_WARMUP_ENABLED:
+        return
+
+    log("warming up unsmile model")
+    classify_with_unsmile(UNSMILE_WARMUP_TEXT)
+    log("warmed up unsmile model")
 
 
 def extract_toxic_score(raw_result):
@@ -318,6 +340,9 @@ def requeue_job(redis_client, raw):
 
 
 def main():
+    signal.signal(signal.SIGTERM, request_shutdown)
+    signal.signal(signal.SIGINT, request_shutdown)
+
     start_http_server(METRICS_PORT)
     redis_client = redis.Redis(
         host=REDIS_HOST,
@@ -332,6 +357,7 @@ def main():
         f"model_version={MODEL_VERSION} "
         f"blur_threshold={BLUR_THRESHOLD:.2f} "
         f"clean_penalty={CLEAN_PENALTY:.2f} "
+        f"warmup_enabled={UNSMILE_WARMUP_ENABLED} "
         f"db_pool_max_connections={DB_POOL_MAX_CONNECTIONS} "
         f"queue={MOD_QUEUE_KEY} "
         f"redis={REDIS_HOST}:{REDIS_PORT} "
@@ -339,7 +365,12 @@ def main():
         f"metrics_port={METRICS_PORT}"
     )
 
-    while True:
+    try:
+        warm_up_unsmile_model()
+    except Exception as exc:
+        log(f"warm-up failed (non-fatal): {exc}")
+
+    while not _shutdown_requested:
         raw = None
         try:
             item = redis_client.brpop(MOD_QUEUE_KEY, timeout=5)
@@ -351,9 +382,13 @@ def main():
             if raw is not None:
                 requeue_job(redis_client, raw)
             log(f"temporary error: {exc}")
+            if _shutdown_requested:
+                break
             time.sleep(2)
         except Exception as exc:
             log(f"job error: {exc}")
+
+    log("worker stopped")
 
 
 if __name__ == "__main__":

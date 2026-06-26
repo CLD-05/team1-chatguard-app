@@ -5,6 +5,7 @@ MODEL_VERSION="unsmile-weighted-v1"
 BLUR_THRESHOLD="0.40"
 CLEAN_PENALTY="0.10"
 MODE="real"
+WARMUP="true"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -24,6 +25,14 @@ while [[ $# -gt 0 ]]; do
       MODE="$2"
       shift 2
       ;;
+    --warmup)
+      WARMUP="true"
+      shift
+      ;;
+    --no-warmup)
+      WARMUP="false"
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage: ./run-model.sh [options]
@@ -33,6 +42,8 @@ Options:
   --blur-threshold NUMBER       Blur threshold
   --clean-penalty NUMBER        Clean-label penalty
   --mode MODE                   Worker mode: real or mock
+  --warmup                      Load and run the model once before reading jobs (default)
+  --no-warmup                   Disable model warm-up
 EOF
       exit 0
       ;;
@@ -93,6 +104,7 @@ export UNSMILE_MODEL_ID="${UNSMILE_MODEL_ID:-smilegate-ai/kor_unsmile}"
 export MODEL_VERSION="$MODEL_VERSION"
 export BLUR_THRESHOLD="$BLUR_THRESHOLD"
 export CLEAN_PENALTY="$CLEAN_PENALTY"
+export UNSMILE_WARMUP_ENABLED="$WARMUP"
 export METRICS_PORT="${METRICS_PORT:-8000}"
 export TOKENIZERS_PARALLELISM="${TOKENIZERS_PARALLELISM:-false}"
 
@@ -102,6 +114,7 @@ echo "  model: $UNSMILE_MODEL_ID"
 echo "  model_version: $MODEL_VERSION"
 echo "  blur_threshold: $BLUR_THRESHOLD"
 echo "  clean_penalty: $CLEAN_PENALTY"
+echo "  warmup_enabled: $UNSMILE_WARMUP_ENABLED"
 echo "  redis: $REDIS_HOST:$REDIS_PORT / $MOD_QUEUE_KEY"
 echo "  db: $DB_URL"
 echo "  metrics: http://localhost:$METRICS_PORT/metrics"

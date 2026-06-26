@@ -26,7 +26,7 @@ def parse_args():
         default=None,
         help="Read an existing moderation_results_*.tsv and regenerate summaries/reports without DB access.",
     )
-    parser.add_argument("--model-version", default=None, help="Example: unsmile-v1, unsmile-weighted-t035-c010")
+    parser.add_argument("--model-version", default=None, help="Example: unsmile-weighted-v1, unsmile-weighted-t035-c010")
     parser.add_argument("--prefix", default="", help="Same prefix used when replaying the dataset.")
     parser.add_argument("--model-id", default="smilegate-ai/kor_unsmile", help="Model id used for this evaluation.")
     parser.add_argument("--blur-threshold", default="0.40", help="Final score threshold for BLUR.")
