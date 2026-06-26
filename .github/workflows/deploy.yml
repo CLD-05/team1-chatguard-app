@@ -100,3 +100,20 @@ jobs:
           git diff --cached --quiet && { echo "no changes"; exit 0; }
           git commit -m "deploy(dev): app@${GITHUB_SHA::7}"
           git push
+
+  notify:
+    name: Slack 알림
+    needs: [build-push, update-config]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0  # v1.27.0
+        with:
+          payload: |
+            {
+              "text": "${{ needs.update-config.result == 'success' && '✅' || '❌' }} *[Deploy] ${{ github.repository }}*\n브랜치: `${{ github.ref_name }}`\n작업자: ${{ github.actor }}\n빌드: ${{ needs['build-push'].result }} / 배포: ${{ needs['update-config'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOY_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

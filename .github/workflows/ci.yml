@@ -115,3 +115,20 @@ jobs:
 
       - name: Test
         run: pytest -q
+
+  notify:
+    name: Slack 알림
+    needs: [backend, frontend, moderation-worker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0  # v1.27.0
+        with:
+          payload: |
+            {
+              "text": "${{ (needs.backend.result == 'success' && needs.frontend.result == 'success' && needs['moderation-worker'].result == 'success') && '✅' || '❌' }} *[CI] ${{ github.repository }}*\nPR: #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}\n작업자: ${{ github.actor }}\n결과: backend=${{ needs.backend.result }} / frontend=${{ needs.frontend.result }} / worker=${{ needs['moderation-worker'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_CI_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
