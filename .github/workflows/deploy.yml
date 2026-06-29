@@ -35,7 +35,9 @@ env:
 jobs:
   build-push:
     name: build+push (${{ matrix.component }})
-    runs-on: ubuntu-latest
+    # arm64 네이티브 러너 — docker build가 arm64 이미지를 생성(노드 전면 arm 전환, DESIGN D53).
+    # x86 소비자 0(EKS 노드 전면 arm)이라 arm 단일. QEMU/buildx 불필요(네이티브 빌드).
+    runs-on: ubuntu-24.04-arm
     strategy:
       # 한 컴포넌트가 실패해도 나머지는 끝까지 빌드 — 실패 원인 파악이 빠르다.
       # (update-config는 needs로 막히므로 반쪽 배포는 발생하지 않는다)
