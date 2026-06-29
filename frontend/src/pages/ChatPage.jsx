@@ -9,6 +9,7 @@ import { getRoom } from '../api/axios'
 import { freezeRoom } from '../api/admin'
 
 const START_INDEX = 1_000_000
+const FONT_SIZE_KEY = 'chat-font-size'
 
 function toYoutubeEmbed(url) {
   if (!url) return null
@@ -32,7 +33,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
   const [streamUrl, setStreamUrl] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
-  const [chatWidth, setChatWidth] = useState(400)
+  const [chatWidth, setChatWidth] = useState(() => Math.min(400, Math.floor(window.innerWidth / 2)))
 
   const isDragging = useRef(false)
   const dragStartX = useRef(0)
@@ -68,7 +69,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
   const onFatalError = useCallback(() => { logout(); navigate('/') }, [logout, navigate])
 
-  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
+  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence, trimmedRef } = useChat({
     roomId,
     token,
     userId: user?.id ?? 0,
@@ -84,14 +85,24 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
   const virtuosoRef = useRef(null)
   const userPausedRef = useRef(false)
+  const notAtBottomTimerRef = useRef(null)
   const [atBottom, setAtBottom] = useState(true)
   const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
-  const [fontSize, setFontSize] = useState(() => localStorage.getItem('chat-font-size') ?? 'M')
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem(FONT_SIZE_KEY) ?? 'M')
+  const lastTrimProcessedRef = useRef(0)
 
   const changeFontSize = useCallback((size) => {
     setFontSize(size)
-    localStorage.setItem('chat-font-size', size)
+    localStorage.setItem(FONT_SIZE_KEY, size)
   }, [])
+
+  useEffect(() => {
+    const delta = trimmedRef.current - lastTrimProcessedRef.current
+    if (delta > 0) {
+      lastTrimProcessedRef.current = trimmedRef.current
+      setFirstItemIndex((i) => i + delta)
+    }
+  }, [messages])
 
   useEffect(() => {
     getRoom(roomId).then(setRoom).catch(() => {})
@@ -111,9 +122,9 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     [user?.id, fontSize],
   )
 
-  const followOutput = useCallback((isAtBottom) => {
+  const followOutput = useCallback(() => {
     if (userPausedRef.current) return false
-    return isAtBottom ? 'auto' : false
+    return 'auto'
   }, [])
 
   const onStartReached = useCallback(async () => {
@@ -347,7 +358,22 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
             itemContent={renderItem}
             followOutput={followOutput}
             atBottomThreshold={80}
-            atBottomStateChange={(b) => { if (b) userPausedRef.current = false; setAtBottom(b) }}
+            atBottomStateChange={(b) => {
+              if (b) {
+                userPausedRef.current = false
+                if (notAtBottomTimerRef.current) {
+                  clearTimeout(notAtBottomTimerRef.current)
+                  notAtBottomTimerRef.current = null
+                }
+              } else {
+                // 200ms 후에도 여전히 바닥이 아니면 사용자가 의도적으로 스크롤한 것으로 판단
+                notAtBottomTimerRef.current = setTimeout(() => {
+                  userPausedRef.current = true
+                  notAtBottomTimerRef.current = null
+                }, 200)
+              }
+              setAtBottom(b)
+            }}
             startReached={onStartReached}
             overscan={300}
             className="flex-1"
