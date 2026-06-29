@@ -52,6 +52,18 @@ CREATE TABLE IF NOT EXISTS banned_words (
     CONSTRAINT fk_banned_words_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    admin_id VARCHAR(255) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    resource_id VARCHAR(255),
+    description TEXT,
+    created_at DATETIME(6) NOT NULL
+);
+
+CREATE INDEX idx_admin_audit_logs_admin_id ON admin_audit_logs (admin_id);
+CREATE INDEX idx_admin_audit_logs_created_at ON admin_audit_logs (created_at);
+
 -- 초기 데이터 주입 (기존 data.sql 통합)
 INSERT INTO rooms (name, streamer_name, created_at)
 VALUES 

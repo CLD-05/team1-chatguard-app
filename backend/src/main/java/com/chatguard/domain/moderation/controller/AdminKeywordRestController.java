@@ -3,6 +3,7 @@ package com.chatguard.domain.moderation.controller;
 import com.chatguard.domain.moderation.entity.BannedWord;
 import com.chatguard.domain.moderation.service.AdminKeywordService;
 import com.chatguard.global.auth.LoginUser;
+import com.chatguard.global.log.AdminLog;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class AdminKeywordRestController {
     }
 
     @PostMapping
+    @AdminLog(value = "CREATE_KWD", resourceId = "#request.word")
     public ResponseEntity<BannedWordResponse> addKeyword(
             @LoginUser Long userId,
             @RequestBody BannedWordRequest request
@@ -54,6 +56,7 @@ public class AdminKeywordRestController {
     }
 
     @DeleteMapping("/{id}")
+    @AdminLog(value = "DELETE_KWD", resourceId = "#id")
     public ResponseEntity<Void> deleteKeyword(@PathVariable Long id) {
         adminKeywordService.deleteBannedWord(id);
         return ResponseEntity.ok().build();
