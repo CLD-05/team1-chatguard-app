@@ -13,14 +13,16 @@ function nameColor(displayName) {
   return NAME_COLORS[Math.abs(hash) % NAME_COLORS.length]
 }
 
-export default memo(function MessageItem({ message, isOwn }) {
+const FONT_SIZE_CLASS = { S: 'text-sm', M: 'text-base', L: 'text-lg' }
+
+export default memo(function MessageItem({ message, isOwn, fontSize = 'M' }) {
   // DELETED 숨김은 ChatPage의 visibleMessages 필터가 단일 진실원이다(D19). 여기서 다시 거르지 않는다.
   const isBlurred = message.status === 'BLURRED'
   const color = isOwn ? 'text-indigo-400' : nameColor(message.display_name)
 
   return (
     <div data-testid={`msg-${message.id}`} className="px-3 py-0.5 hover:bg-white/5 rounded transition-colors group flex items-baseline gap-2">
-      <p className="text-sm leading-relaxed break-words flex-1 min-w-0">
+      <p className={`${FONT_SIZE_CLASS[fontSize]} leading-relaxed break-words flex-1 min-w-0`}>
         <span className={`font-bold mr-1 ${color}`}>{message.display_name}</span>
         <span className="text-gray-500 mr-1 select-none">:</span>
         {isBlurred ? (
