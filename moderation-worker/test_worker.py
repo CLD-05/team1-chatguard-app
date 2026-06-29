@@ -11,6 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # 같은 프로세스에서 reload하지 않고 env 기본값을 독립적으로 확인한다.
 _CLEARED_KEYS = [
     "MODERATOR_MODE",
+    "METRICS_PORT",
     "MOD_QUEUE_KEY",
     "REDIS_QUEUE_NAME",
     "DB_USER",
@@ -36,6 +37,10 @@ def test_moderator_mode_defaults_to_real():
 
 def test_explicit_mock_mode_is_honored():
     assert worker_const("MODERATOR_MODE", {"MODERATOR_MODE": "MOCK"}) == "mock"
+
+
+def test_metrics_port_is_fixed_8000():
+    assert worker_const("METRICS_PORT", {"METRICS_PORT": "9999"}) == 8000
 
 
 

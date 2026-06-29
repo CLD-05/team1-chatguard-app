@@ -138,6 +138,33 @@ DB_URL="jdbc:mysql://localhost:3307/chatguard_dev" REDIS_HOST="localhost" ./run-
 ```
 
 
+
+## Metrics 확인
+
+worker는 `prometheus_client`로 8000번 포트에 `/metrics`를 연다.
+
+Windows(PowerShell):
+
+```powershell
+Invoke-RestMethod http://localhost:8000/metrics
+```
+
+macOS / Linux(bash):
+
+```bash
+curl -s http://localhost:8000/metrics | grep moderation_jobs_total
+```
+
+주요 지표:
+
+- `moderation_jobs_total{verdict="pass|block"}`
+- `moderation_inference_seconds`
+- `moderation_queue_wait_seconds`
+- `moderation_e2e_seconds`
+- `moderation_retries_total`
+- `moderation_dlq_total`
+- `moderation_recovered_processing_total`
+
 ## DB 결과 확인
 
 MySQL 콘솔 접속 시 한글이 깨지지 않도록 `utf8mb4` 옵션을 붙인다.

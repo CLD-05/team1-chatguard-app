@@ -105,6 +105,7 @@ export MODEL_VERSION="$MODEL_VERSION"
 export BLUR_THRESHOLD="$BLUR_THRESHOLD"
 export CLEAN_PENALTY="$CLEAN_PENALTY"
 export UNSMILE_WARMUP_ENABLED="$WARMUP"
+export METRICS_PORT="${METRICS_PORT:-8000}"
 export TOKENIZERS_PARALLELISM="${TOKENIZERS_PARALLELISM:-false}"
 
 echo "Starting ChatGuard moderation worker"
@@ -116,5 +117,6 @@ echo "  clean_penalty: $CLEAN_PENALTY"
 echo "  warmup_enabled: $UNSMILE_WARMUP_ENABLED"
 echo "  redis: $REDIS_HOST:$REDIS_PORT / $MOD_QUEUE_KEY"
 echo "  db: $DB_URL"
+echo "  metrics: http://localhost:$METRICS_PORT/metrics"
 
 exec "$VENV_PY" worker.py
