@@ -32,7 +32,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
   const [streamUrl, setStreamUrl] = useState('')
   const [urlInput, setUrlInput] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
-  const [chatWidth, setChatWidth] = useState(320)
+  const [chatWidth, setChatWidth] = useState(400)
 
   const isDragging = useRef(false)
   const dragStartX = useRef(0)
@@ -50,7 +50,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     function onMouseMove(e) {
       if (!isDragging.current) return
       const delta = dragStartX.current - e.clientX
-      setChatWidth(Math.min(520, Math.max(220, dragStartWidth.current + delta)))
+      setChatWidth(Math.min(Math.floor(window.innerWidth / 2), Math.max(220, dragStartWidth.current + delta)))
     }
     function onMouseUp() {
       if (!isDragging.current) return
@@ -86,6 +86,12 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
   const userPausedRef = useRef(false)
   const [atBottom, setAtBottom] = useState(true)
   const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('chat-font-size') ?? 'M')
+
+  const changeFontSize = useCallback((size) => {
+    setFontSize(size)
+    localStorage.setItem('chat-font-size', size)
+  }, [])
 
   useEffect(() => {
     getRoom(roomId).then(setRoom).catch(() => {})
@@ -101,8 +107,8 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
   )
 
   const renderItem = useCallback(
-    (_i, m) => <MessageItem message={m} isOwn={m.user_id === user?.id} />,
-    [user?.id],
+    (_i, m) => <MessageItem message={m} isOwn={m.user_id === user?.id} fontSize={fontSize} />,
+    [user?.id, fontSize],
   )
 
   const followOutput = useCallback((isAtBottom) => {
@@ -296,9 +302,20 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
         {/* 채팅 패널 */}
         <div style={{ width: chatWidth }} className="bg-gray-900 flex flex-col shrink-0">
 
-          <div className="h-9 border-b border-gray-800 flex items-center px-3 shrink-0">
+          <div className="h-9 border-b border-gray-800 flex items-center px-3 shrink-0 gap-2">
             <span className="text-xs font-semibold text-gray-400">채팅</span>
-            <span className="ml-auto text-xs text-gray-700">{visibleMessages.length}</span>
+            <div className="ml-auto flex items-center gap-0.5">
+              {['S', 'M', 'L'].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => changeFontSize(s)}
+                  className={`w-6 h-6 text-xs rounded transition-colors ${fontSize === s ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:text-gray-300'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-gray-700">{visibleMessages.length}</span>
           </div>
 
           {frozen && (
