@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getMessages, setMockWsHandler, simulateModerationHide, USE_MOCK } from '../api/axios'
 
 
+const MAX_MESSAGES = 500
+
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL
   ?? (import.meta.env.DEV
     ? 'ws://127.0.0.1:8080/ws'
@@ -27,6 +29,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   const reconnectTimer = useRef(null)
   const bufferRef = useRef([])
   const isReconnect = useRef(false)
+  const trimmedRef = useRef(0)
 
   const handleEvent = useCallback((event) => {
     if (event.type === 'chat.message') {
@@ -61,7 +64,16 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       if (!bufferRef.current.length) return
       const batch = bufferRef.current
       bufferRef.current = []
-      setMessages((prev) => [...prev, ...batch])
+      setMessages((prev) => {
+        const combined = [...prev, ...batch]
+        if (combined.length > MAX_MESSAGES) {
+          const trimmed = combined.slice(0, combined.length - MAX_MESSAGES)
+          const visibleRemoved = trimmed.filter((m) => m.status !== 'DELETED').length
+          trimmedRef.current += visibleRemoved
+          return combined.slice(-MAX_MESSAGES)
+        }
+        return combined
+      })
     }, 80)
     return () => clearInterval(t)
   }, [])
@@ -70,10 +82,14 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
     const history = await getMessages(roomId, before)
     if (history.length < 50) setHasMore(false)
     if (history.length) {
-      setMessages((prev) => [
-        ...history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })),
-        ...prev,
-      ])
+      setMessages((prev) => {
+        const combined = [
+          ...history.map((m) => ({ ...m, status: m.status ?? 'VISIBLE' })),
+          ...prev,
+        ]
+        // 뒤에서 자르기: 오래된 메시지를 살리고 최신 메시지를 제거 (firstItemIndex 조정 불필요)
+        return combined.length > MAX_MESSAGES ? combined.slice(0, MAX_MESSAGES) : combined
+      })
     }
     return history
   }, [roomId])
@@ -197,5 +213,5 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
   const clearWsError = useCallback(() => setWsError(null), [])
 
-  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence }
+  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence, trimmedRef }
 }
