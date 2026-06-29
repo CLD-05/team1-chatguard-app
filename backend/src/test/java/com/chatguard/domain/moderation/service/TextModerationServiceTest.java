@@ -56,7 +56,9 @@ class TextModerationServiceTest {
         // 2-3) 한글 금칙어 종성 분리 우회 패턴 검증
         assertThat(textModerationService.judge("미친노ㅁ")).isTrue();
 
-        // 3) 정상 문장은 통과 검증
+        // 3) 정상 문장은 통과 검증 (False Positive 방어 검증)
+        assertThat(textModerationService.judge("미친 척 연기해보자")).isFalse();
+        assertThat(textModerationService.judge("미친듯이 달렸다")).isFalse();
         assertThat(textModerationService.judge("정상적인 메시지입니다.")).isFalse();
         
         // 4) 빈 문자열 및 null 가드 검증

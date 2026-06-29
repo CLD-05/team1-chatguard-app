@@ -46,10 +46,11 @@ public class TextModerationService {
     private static final String JUNGSUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ";
     private static final String JONGSUNG = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"; // 첫 문자 공백(종성 없음 표현)
 
-    // 캐시 레퍼런스 감지를 통한 셋 분할 최적화
+    private static record KeywordSplit(Set<String> korean, Set<String> nonKorean) {}
+
+    // 캐시 레퍼런스 감지를 통한 셋 분할 최적화 및 동시성 원자성 확보
     private volatile Set<String> lastBannedKeywordsRef = null;
-    private volatile Set<String> cachedKoreanBannedKeywords = Set.of();
-    private volatile Set<String> cachedNonKoreanBannedKeywords = Set.of();
+    private volatile KeywordSplit cachedSplit = new KeywordSplit(Set.of(), Set.of());
 
     private boolean isKoreanOnly(String word) {
         if (word == null || word.isEmpty()) {
@@ -130,6 +131,12 @@ public class TextModerationService {
         return sb.toString();
     }
 
+    /**
+     * [금칙어 등록 정책 제약 조건]
+     * 1차 금칙어 DB(banned_words)에는 특수문자나 숫자를 섞지 않은 순수한 완성형 한글 또는 영문 오리지널 단어로 등록해야 합니다.
+     * 예: "시1발"과 같이 혼합형으로 등록될 경우, 비한글 셋(nonKorean)으로 분류되어 "시 1 발" 등의 공백 우회 패턴을
+     * 한글 전처리 필터에서 걸러내지 못하는 공백이 발생할 수 있습니다.
+     */
     private synchronized void updateCachedSplits(Set<String> currentKeywords) {
         if (lastBannedKeywordsRef == currentKeywords) {
             return;
@@ -145,8 +152,7 @@ public class TextModerationService {
                 }
             }
         }
-        this.cachedKoreanBannedKeywords = koSet;
-        this.cachedNonKoreanBannedKeywords = nonKoSet;
+        this.cachedSplit = new KeywordSplit(java.util.Collections.unmodifiableSet(koSet), java.util.Collections.unmodifiableSet(nonKoSet));
         this.lastBannedKeywordsRef = currentKeywords;
     }
 
@@ -160,10 +166,13 @@ public class TextModerationService {
             updateCachedSplits(currentKeywords);
         }
 
+        // 스냅샷 뒤섞임 방지를 위해 단일 volatile 참조를 로컬 변수에 확보
+        KeywordSplit split = this.cachedSplit;
+
         String lowerContent = content.toLowerCase();
         
         // 1. 영어, 숫자, 특수문자가 섞인 금칙어는 원본 소문자 텍스트 기준으로 1차 비교 (영문 셋만 순회)
-        boolean originalMatch = cachedNonKoreanBannedKeywords.stream()
+        boolean originalMatch = split.nonKorean().stream()
                 .anyMatch(lowerContent::contains);
 
         if (originalMatch) {
@@ -181,7 +190,7 @@ public class TextModerationService {
 
         // 3. 전처리된 결과물이 비어있지 않은지 검증 후, 순수 한글 금칙어 비교 수행 (한글 셋만 순회)
         if (!cleanContent.isEmpty()) {
-            return cachedKoreanBannedKeywords.stream()
+            return split.korean().stream()
                     .anyMatch(cleanContent::contains);
         }
 
