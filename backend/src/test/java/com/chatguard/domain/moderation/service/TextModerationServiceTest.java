@@ -29,7 +29,8 @@ class TextModerationServiceTest {
         BannedWord word1 = BannedWord.builder().word("BadWord").build();
         BannedWord word2 = BannedWord.builder().word("욕설").build();
         BannedWord word3 = BannedWord.builder().word("미친새끼").build();
-        when(bannedWordRepository.findAll()).thenReturn(List.of(word1, word2, word3));
+        BannedWord word4 = BannedWord.builder().word("미친년").build();
+        when(bannedWordRepository.findAll()).thenReturn(List.of(word1, word2, word3, word4));
 
         // When
         textModerationService.refreshCache();
@@ -46,6 +47,10 @@ class TextModerationServiceTest {
         assertThat(textModerationService.judge("미1친1새1끼")).isTrue();
         assertThat(textModerationService.judge("미_친_새_끼")).isTrue();
         assertThat(textModerationService.judge("미 친 새 끼")).isTrue();
+
+        // 2-2) 한글 금칙어 자모음 분리 우회 패턴 검증
+        assertThat(textModerationService.judge("ㅁ ㅣ친년")).isTrue();
+        assertThat(textModerationService.judge("ㅁㅣ친년")).isTrue();
 
         // 3) 정상 문장은 통과 검증
         assertThat(textModerationService.judge("정상적인 메시지입니다.")).isFalse();

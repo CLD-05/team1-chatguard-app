@@ -40,7 +40,11 @@ public class TextModerationService {
         }
     }
 
-    private static final java.util.regex.Pattern HANGUL_PATTERN = java.util.regex.Pattern.compile("[^가-힣]");
+    private static final java.util.regex.Pattern HANGUL_PATTERN = java.util.regex.Pattern.compile("[^가-힣ㄱ-ㅎㅏ-ㅣ]");
+    
+    private static final String CHOSUNG = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+    private static final String JUNGSUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ";
+    private static final String JONGSUNG = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"; // 첫 문자 공백(종성 없음 표현)
 
     // 캐시 레퍼런스 감지를 통한 셋 분할 최적화
     private volatile Set<String> lastBannedKeywordsRef = null;
@@ -53,11 +57,56 @@ public class TextModerationService {
         }
         for (int i = 0; i < word.length(); i++) {
             char c = word.charAt(i);
-            if (c < 0xAC00 || c > 0xD7A3) {
+            // 완성형 한글(0xAC00~0xD7A3) 및 한글 자모(0x3130~0x318F) 범위 체크
+            boolean isHangul = (c >= 0xAC00 && c <= 0xD7A3) || (c >= 0x3130 && c <= 0x318F);
+            if (!isHangul) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static String combineJamo(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        int len = text.length();
+        while (i < len) {
+            char c = text.charAt(i);
+            int choIdx = CHOSUNG.indexOf(c);
+            if (choIdx != -1 && i + 1 < len) {
+                char next = text.charAt(i + 1);
+                int jungIdx = JUNGSUNG.indexOf(next);
+                if (jungIdx != -1) {
+                    // 초성 + 중성이 성립함
+                    int jongIdx = 0;
+                    int skip = 2;
+                    if (i + 2 < len) {
+                        char next2 = text.charAt(i + 2);
+                        int tempJong = JONGSUNG.indexOf(next2);
+                        if (tempJong > 0) {
+                            boolean isNextNextJungsung = false;
+                            if (i + 3 < len) {
+                                isNextNextJungsung = JUNGSUNG.indexOf(text.charAt(i + 3)) != -1;
+                            }
+                            if (!isNextNextJungsung) {
+                                jongIdx = tempJong;
+                                skip = 3;
+                            }
+                        }
+                    }
+                    char combined = (char) ((choIdx * 21 + jungIdx) * 28 + jongIdx + 0xAC00);
+                    sb.append(combined);
+                    i += skip;
+                    continue;
+                }
+            }
+            sb.append(c);
+            i++;
+        }
+        return sb.toString();
     }
 
     private synchronized void updateCachedSplits(Set<String> currentKeywords) {
@@ -100,8 +149,14 @@ public class TextModerationService {
             return true;
         }
 
-        // 2. 한글을 제외한 모든 문자(특수문자, 숫자, 공백 등) 제거 전처리
+        // 2. 한글(자모음 포함)을 제외한 모든 문자(특수문자, 숫자, 공백 등) 제거 전처리
         String cleanContent = HANGUL_PATTERN.matcher(content).replaceAll("");
+        
+        // 자모음 결합(Normalization) 추가
+        cleanContent = java.text.Normalizer.normalize(cleanContent, java.text.Normalizer.Form.NFC);
+        
+        // 호환 자모 결합 오토마타 보완
+        cleanContent = combineJamo(cleanContent);
 
         // 3. 전처리된 결과물이 비어있지 않은지 검증 후, 순수 한글 금칙어 비교 수행 (한글 셋만 순회)
         if (!cleanContent.isEmpty()) {
