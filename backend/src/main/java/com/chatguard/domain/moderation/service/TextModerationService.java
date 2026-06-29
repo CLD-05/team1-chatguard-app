@@ -75,6 +75,27 @@ public class TextModerationService {
         int len = text.length();
         while (i < len) {
             char c = text.charAt(i);
+            
+            // 완성형 한글 음절 뒤에 단독 자음이 유입되는 경우 결합 ("노" + "ㅁ" -> "놈")
+            if (sb.length() > 0) {
+                char prev = sb.charAt(sb.length() - 1);
+                if (prev >= 0xAC00 && prev <= 0xD7A3 && (prev - 0xAC00) % 28 == 0) {
+                    int jongIdx = JONGSUNG.indexOf(c);
+                    if (jongIdx > 0) {
+                        boolean isNextJungsung = false;
+                        if (i + 1 < len) {
+                            isNextJungsung = JUNGSUNG.indexOf(text.charAt(i + 1)) != -1;
+                        }
+                        if (!isNextJungsung) {
+                            char combined = (char) (prev + jongIdx);
+                            sb.setCharAt(sb.length() - 1, combined);
+                            i++;
+                            continue;
+                        }
+                    }
+                }
+            }
+
             int choIdx = CHOSUNG.indexOf(c);
             if (choIdx != -1 && i + 1 < len) {
                 char next = text.charAt(i + 1);
