@@ -10,7 +10,6 @@ import pymysql
 import redis
 import torch
 from dbutils.pooled_db import PooledDB
-from prometheus_client import Counter, Histogram, start_http_server
 
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -39,8 +38,6 @@ BLUR_THRESHOLD = float(os.getenv("BLUR_THRESHOLD", "0.40"))
 CLEAN_PENALTY = float(os.getenv("CLEAN_PENALTY", "0.10"))
 UNSMILE_WARMUP_ENABLED = os.getenv("UNSMILE_WARMUP_ENABLED", "true").lower() == "true"
 UNSMILE_WARMUP_TEXT = os.getenv("UNSMILE_WARMUP_TEXT", "warmup message")
-# A-5 런타임 계약: Worker 메트릭 포트는 8000 고정.
-METRICS_PORT = 8000
 
 MOCK_TOXIC_TERMS = [
     term.strip().lower()
@@ -77,37 +74,6 @@ _classifier = None
 _db_pool = None
 _shutdown_requested = False
 
-JOBS_TOTAL = Counter(
-    "moderation_jobs_total",
-    "Total moderation jobs processed by verdict.",
-    ["verdict"],
-)
-INFERENCE_SECONDS = Histogram(
-    "moderation_inference_seconds",
-    "Time spent running the moderation model.",
-)
-QUEUE_WAIT_SECONDS = Histogram(
-    "moderation_queue_wait_seconds",
-    "Time between queue enqueue and worker dequeue.",
-)
-E2E_SECONDS = Histogram(
-    "moderation_e2e_seconds",
-    "Time between queue enqueue and moderation.hide publish for blocked jobs.",
-)
-RETRIES_TOTAL = Counter(
-    "moderation_retries_total",
-    "Total moderation jobs requeued after temporary failures.",
-)
-DLQ_TOTAL = Counter(
-    "moderation_dlq_total",
-    "Total moderation jobs moved to dead letter queue.",
-)
-RECOVERED_TOTAL = Counter(
-    "moderation_recovered_processing_total",
-    "Total stale processing jobs recovered to the main queue.",
-)
-
-
 def log(message):
     now = datetime.now(timezone.utc).isoformat()
     print(f"[{now}] {message}", flush=True)
@@ -121,14 +87,10 @@ def request_shutdown(signum, _frame):
 
 
 def classify(content):
-    start = time.perf_counter()
-    try:
-        # mock은 명시 설정 시에만. 그 외(real/unsmile/미설정)는 실모델 판정.
-        if MODERATOR_MODE == "mock":
-            return classify_with_mock(content)
-        return classify_with_unsmile(content)
-    finally:
-        INFERENCE_SECONDS.observe(time.perf_counter() - start)
+    if MODERATOR_MODE == "mock":
+        return classify_with_mock(content)
+    return classify_with_unsmile(content)
+
 
 
 def classify_with_mock(content):
@@ -198,6 +160,7 @@ def extract_toxic_score(raw_result):
     return final_score, top_label
 
 
+
 def build_result(score, model_version, reason):
     if score >= BLUR_THRESHOLD:
         action = "blur"
@@ -216,7 +179,6 @@ def build_result(score, model_version, reason):
 
 
 def handle_job(raw, redis_client):
-    dequeued_at = time.time()
     job = json.loads(raw)
     message_id = job.get("message_id")
     room_id = job.get("room_id")
@@ -225,10 +187,6 @@ def handle_job(raw, redis_client):
         raise ValueError("message_id is required")
     if room_id is None:
         raise ValueError("room_id is required")
-
-    enqueued_at = parse_enqueued_at(job.get("enqueued_at"))
-    if enqueued_at is not None:
-        QUEUE_WAIT_SECONDS.observe(max(0.0, dequeued_at - enqueued_at))
 
     result = classify(content)
     log(
@@ -240,12 +198,9 @@ def handle_job(raw, redis_client):
     )
 
     apply_result_to_db(job, result)
-    JOBS_TOTAL.labels(verdict=result["verdict"].lower()).inc()
 
     if result["action"] == "blur":
         publish_hide(redis_client, room_id, message_id, result["action"])
-        if enqueued_at is not None:
-            E2E_SECONDS.observe(max(0.0, time.time() - enqueued_at))
 
 
 def apply_result_to_db(job, result):
@@ -404,7 +359,6 @@ def recover_stale_processing_jobs(redis_client):
             recovered += 1
 
     if recovered:
-        RECOVERED_TOTAL.inc(recovered)
         log(f"recovered stale processing jobs count={recovered}")
 
 
@@ -436,7 +390,6 @@ def retry_or_dlq_job(redis_client, raw, exc):
     if retry_count >= MAX_RETRY_COUNT:
         redis_client.lpush(DLQ_QUEUE_KEY, payload)
         ack_processing_job(redis_client, raw)
-        DLQ_TOTAL.inc()
         log(
             "moved moderation job to dlq "
             f"message_id={message_id} "
@@ -447,7 +400,6 @@ def retry_or_dlq_job(redis_client, raw, exc):
 
     redis_client.lpush(MOD_QUEUE_KEY, payload)
     ack_processing_job(redis_client, raw)
-    RETRIES_TOTAL.inc()
     log(
         "requeued moderation job after failure "
         f"message_id={message_id} "
@@ -459,7 +411,6 @@ def main():
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
 
-    start_http_server(METRICS_PORT)
     redis_client = redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
@@ -483,8 +434,7 @@ def main():
         f"recover_processing_on_startup={RECOVER_PROCESSING_ON_STARTUP} "
         f"worker_id={WORKER_ID} "
         f"redis={REDIS_HOST}:{REDIS_PORT} "
-        f"db={DB_URL} "
-        f"metrics_port={METRICS_PORT}"
+        f"db={DB_URL}"
     )
 
     try:

@@ -57,7 +57,6 @@ $env:MODEL_VERSION = $ModelVersion
 $env:BLUR_THRESHOLD = $BlurThreshold.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
 $env:CLEAN_PENALTY = $CleanPenalty.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
 $env:UNSMILE_WARMUP_ENABLED = if ($NoWarmup) { "false" } else { "true" }
-$env:METRICS_PORT = if ($env:METRICS_PORT) { $env:METRICS_PORT } else { "8000" }
 
 Write-Host "Starting ChatGuard moderation worker"
 Write-Host "  mode: $env:MODERATOR_MODE"
@@ -68,6 +67,5 @@ Write-Host "  clean_penalty: $env:CLEAN_PENALTY"
 Write-Host "  warmup_enabled: $env:UNSMILE_WARMUP_ENABLED"
 Write-Host "  redis: $env:REDIS_HOST`:$env:REDIS_PORT / $env:MOD_QUEUE_KEY"
 Write-Host "  db: $env:DB_URL"
-Write-Host "  metrics: http://localhost:$env:METRICS_PORT/metrics"
 
 & ".\.venv\Scripts\python.exe" ".\worker.py"
