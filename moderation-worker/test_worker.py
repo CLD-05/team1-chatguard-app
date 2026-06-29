@@ -8,7 +8,7 @@ import worker
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # 임포트 시점에 평가되는 모듈 상수를 깨끗한 환경에서 검증하기 위해 별도 인터프리터로 읽는다.
-# (같은 프로세스에서 importlib.reload 하면 prometheus_client 메트릭이 중복 등록되어 실패한다.)
+# 같은 프로세스에서 reload하지 않고 env 기본값을 독립적으로 확인한다.
 _CLEARED_KEYS = [
     "MODERATOR_MODE",
     "METRICS_PORT",
@@ -40,8 +40,8 @@ def test_explicit_mock_mode_is_honored():
 
 
 def test_metrics_port_is_fixed_8000():
-    # 계약상 8000 고정 — env로 덮어쓸 수 없어야 한다.
     assert worker_const("METRICS_PORT", {"METRICS_PORT": "9999"}) == 8000
+
 
 
 def test_mod_queue_key_ignores_noncontract_alias():
