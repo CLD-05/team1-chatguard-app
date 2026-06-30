@@ -1,6 +1,7 @@
 package com.chatguard.global.log;
 
 import com.chatguard.domain.admin.service.AdminAuditLogService;
+import com.chatguard.domain.moderation.repository.BannedWordRepository;
 import com.chatguard.domain.user.entity.User;
 import com.chatguard.domain.user.repository.UserRepository;
 import com.chatguard.global.auth.AuthContext;
@@ -27,6 +28,7 @@ public class AdminLogAspect {
 
     private final AdminAuditLogService adminAuditLogService;
     private final UserRepository userRepository;
+    private final BannedWordRepository bannedWordRepository;
     private final ExpressionParser parser = new SpelExpressionParser();
 
     @Around("@annotation(adminLog)")
@@ -34,12 +36,31 @@ public class AdminLogAspect {
         // 1. 현재 어드민 식별 (AuthContext ThreadLocal 및 DB 조회 연동)
         String adminId = resolveAdminId();
 
+        String action = adminLog.value();
+        String resourceId = null;
+
+        // [선택안 2] 삭제하기 전에 DB에서 단어 원문을 조회하여 resourceId로 선점
+        if ("DELETE_KWD".equals(action)) {
+            String rawIdStr = resolveResourceId(joinPoint, adminLog.resourceId());
+            if (rawIdStr != null) {
+                try {
+                    Long wordId = Long.parseLong(rawIdStr);
+                    resourceId = bannedWordRepository.findById(wordId)
+                            .map(com.chatguard.domain.moderation.entity.BannedWord::getWord)
+                            .orElse(rawIdStr);
+                } catch (NumberFormatException e) {
+                    resourceId = rawIdStr;
+                }
+            }
+        }
+
         // 2. 비즈니스 로직 실행
         Object result = joinPoint.proceed();
 
         // 3. 로그 메타데이터 (resourceId, description) 동적 추출
-        String action = adminLog.value();
-        String resourceId = resolveResourceId(joinPoint, adminLog.resourceId());
+        if (resourceId == null) {
+            resourceId = resolveResourceId(joinPoint, adminLog.resourceId());
+        }
         String description = resolveDescription(joinPoint);
 
         // 4. 비동기 저장 서비스 호출
