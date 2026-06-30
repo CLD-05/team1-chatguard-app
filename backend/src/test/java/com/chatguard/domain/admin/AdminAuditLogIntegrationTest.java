@@ -5,6 +5,8 @@ import com.chatguard.domain.admin.repository.AdminAuditLogRepository;
 import com.chatguard.domain.user.entity.User;
 import com.chatguard.domain.user.entity.UserRole;
 import com.chatguard.domain.user.repository.UserRepository;
+import com.chatguard.domain.moderation.entity.BannedWord;
+import com.chatguard.domain.moderation.repository.BannedWordRepository;
 import com.chatguard.global.auth.JwtProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +53,9 @@ class AdminAuditLogIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private BannedWordRepository bannedWordRepository;
+
+    @Autowired
     private JwtProvider jwtProvider;
 
     @Autowired
@@ -84,6 +89,7 @@ class AdminAuditLogIntegrationTest {
 
         // Clean tables
         adminAuditLogRepository.deleteAll();
+        bannedWordRepository.deleteAll();
         userRepository.deleteAll();
 
         // Create Admin User
@@ -132,10 +138,14 @@ class AdminAuditLogIntegrationTest {
     }
 
     @Test
-    @DisplayName("금칙어 삭제 API 호출 시 비침습적 AOP를 통해 delete 액션 및 id 파라미터가 resourceId로 수집된다.")
+    @DisplayName("금칙어 삭제 API 호출 시 비침습적 AOP를 통해 delete 액션 및 단어 원문이 resourceId로 수집된다.")
     void deleteKeywordAuditLogTest() throws Exception {
-        // Given: 가상의 금칙어 ID
-        Long targetWordId = 999L;
+        // Given: 실제 금칙어 저장
+        BannedWord bannedWord = bannedWordRepository.save(BannedWord.builder()
+                .word("badword")
+                .createdBy(adminUser)
+                .build());
+        Long targetWordId = bannedWord.getId();
 
         // When
         mockMvc.perform(delete("/api/admin/keywords/" + targetWordId)
@@ -150,7 +160,7 @@ class AdminAuditLogIntegrationTest {
             AdminAuditLog log = logs.get(0);
             assertThat(log.getAdminId()).isEqualTo("super_admin");
             assertThat(log.getAction()).isEqualTo("DELETE_KWD"); // @AdminLog("DELETE_KWD") 검증
-            assertThat(log.getResourceId()).isEqualTo(targetWordId.toString()); // SpEL로 파싱된 id 검증
+            assertThat(log.getResourceId()).isEqualTo("badword"); // SpEL 및 AOP 조회를 거쳐 단어 원문 "badword"가 검증됨
         });
     }
 }
