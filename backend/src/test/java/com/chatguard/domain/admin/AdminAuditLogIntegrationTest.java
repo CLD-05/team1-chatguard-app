@@ -89,8 +89,8 @@ class AdminAuditLogIntegrationTest {
 
         // Clean tables
         adminAuditLogRepository.deleteAll();
-        userRepository.deleteAll();
         bannedWordRepository.deleteAll();
+        userRepository.deleteAll();
 
         // Create Admin User
         adminUser = userRepository.save(User.builder()

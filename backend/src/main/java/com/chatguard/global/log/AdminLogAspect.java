@@ -26,6 +26,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AdminLogAspect {
 
+    private static final String DELETE_KEYWORD_ACTION = "DELETE_KWD";
+
     private final AdminAuditLogService adminAuditLogService;
     private final UserRepository userRepository;
     private final BannedWordRepository bannedWordRepository;
@@ -39,7 +41,7 @@ public class AdminLogAspect {
         String action = adminLog.value();
         String resourceId = null;
 
-        if ("DELETE_KWD".equals(action)) {
+        if (DELETE_KEYWORD_ACTION.equals(action)) {
             String rawIdStr = resolveResourceId(joinPoint, adminLog.resourceId());
             if (rawIdStr != null) {
                 try {
@@ -48,6 +50,9 @@ public class AdminLogAspect {
                             .map(com.chatguard.domain.moderation.entity.BannedWord::getWord)
                             .orElse(rawIdStr);
                 } catch (NumberFormatException e) {
+                    resourceId = rawIdStr;
+                } catch (Exception e) {
+                    log.warn("Failed to resolve banned word text for id={}, falling back to id string", rawIdStr, e);
                     resourceId = rawIdStr;
                 }
             }
