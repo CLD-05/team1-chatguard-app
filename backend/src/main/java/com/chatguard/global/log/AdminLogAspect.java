@@ -39,7 +39,6 @@ public class AdminLogAspect {
         String action = adminLog.value();
         String resourceId = null;
 
-        // [선택안 2] 삭제하기 전에 DB에서 단어 원문을 조회하여 resourceId로 선점
         if ("DELETE_KWD".equals(action)) {
             String rawIdStr = resolveResourceId(joinPoint, adminLog.resourceId());
             if (rawIdStr != null) {
