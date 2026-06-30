@@ -108,7 +108,7 @@ public class ChatRoomSessionRegistry implements ApplicationListener<ContextClose
         }
     }
 
-    public void closeAllSessions() {
+    private void closeAllSessions() {
         int totalSessions = rooms.values().stream().mapToInt(Map::size).sum();
         log.info("Graceful Drain: Context closed event received. Attempting to clear presence and close {} active sessions with status 1001", totalSessions);
         
