@@ -1,5 +1,6 @@
 package com.chatguard.domain.room.service;
 
+import com.chatguard.domain.chat.service.RoomPresenceService;
 import com.chatguard.domain.room.dto.RoomCreateRequest;
 import com.chatguard.domain.room.dto.RoomResponse;
 import com.chatguard.domain.room.entity.Room;
@@ -17,10 +18,20 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class RoomService {
     private final RoomRepository roomRepository;
+    private final RoomPresenceService roomPresenceService;
 
     public List<RoomResponse> getRooms() {
         return roomRepository.findAll().stream()
-            .map(RoomResponse::from)
+            .map(room -> {
+                int count = (int) roomPresenceService.getSnapshot(room.getId()).get("count");
+                return new RoomResponse(
+                    room.getId(),
+                    room.getName(),
+                    room.getStreamerName(),
+                    room.getCreatedAt(),
+                    count
+                );
+            })
             .toList();
     }
 

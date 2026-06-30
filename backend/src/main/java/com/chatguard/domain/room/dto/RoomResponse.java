@@ -11,14 +11,17 @@ public record RoomResponse(
     @JsonProperty("streamer_name")
     String streamerName,
     @JsonProperty("created_at")
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    @JsonProperty("presence_count")
+    int presenceCount
 ) {
     public static RoomResponse from(Room room) {
         return new RoomResponse(
             room.getId(),
             room.getName(),
             room.getStreamerName(),
-            room.getCreatedAt()
+            room.getCreatedAt(),
+            0
         );
     }
 }

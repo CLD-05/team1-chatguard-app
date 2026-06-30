@@ -10,29 +10,13 @@ import { freezeRoom } from '../api/admin'
 
 const START_INDEX = 1_000_000
 const FONT_SIZE_KEY = 'chat-font-size'
-
-function toYoutubeEmbed(url) {
-  if (!url) return null
-  try {
-    const u = new URL(url)
-    let videoId = null
-    if (u.hostname.includes('youtu.be')) {
-      videoId = u.pathname.slice(1)
-    } else if (u.hostname.includes('youtube.com')) {
-      videoId = u.searchParams.get('v')
-    }
-    if (!videoId) return null
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1`
-  } catch {
-    return null
-  }
+const ROOM_STREAM_URLS = {
+  2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/demo.mp4',
 }
 
 function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
   const [room, setRoom] = useState(null)
-  const [streamUrl, setStreamUrl] = useState('')
-  const [urlInput, setUrlInput] = useState('')
-  const [showUrlInput, setShowUrlInput] = useState(false)
+  const [streamUrl] = useState(() => ROOM_STREAM_URLS[roomId] ?? '')
   const [chatWidth, setChatWidth] = useState(() => Math.min(400, Math.floor(window.innerWidth / 2)))
 
   const isDragging = useRef(false)
@@ -134,13 +118,6 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     if (visibleOlder.length) setFirstItemIndex((i) => i - visibleOlder.length)
   }, [hasMore, loadMore, visibleMessages])
 
-  const embedUrl = toYoutubeEmbed(streamUrl)
-
-  function handleSetUrl() {
-    setStreamUrl(urlInput.trim())
-    setShowUrlInput(false)
-  }
-
   return (
     <div className="h-screen flex flex-col bg-gray-950 overflow-hidden">
 
@@ -176,18 +153,6 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
         {isAdmin && (
           <button
-            onClick={() => setShowUrlInput((v) => !v)}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition-colors ${showUrlInput ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white hover:bg-gray-800'}`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
-            URL
-          </button>
-        )}
-
-        {isAdmin && (
-          <button
             onClick={() => freezeRoom(roomId, !frozen).catch((e) => console.error('freeze failed', e))}
             title={frozen ? '채팅 재개' : '채팅 얼리기'}
             className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-colors ${
@@ -218,45 +183,19 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
         </button>
       </header>
 
-      {/* URL 입력바 (어드민) */}
-      {showUrlInput && (
-        <div className="bg-gray-900 border-b border-gray-800 px-4 py-2 flex gap-2 shrink-0">
-          <input
-            type="text"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSetUrl()}
-            placeholder="YouTube URL 입력 (예: https://www.youtube.com/watch?v=...)"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
-          />
-          <button
-            onClick={handleSetUrl}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs transition-colors"
-          >
-            적용
-          </button>
-          {streamUrl && (
-            <button
-              onClick={() => { setStreamUrl(''); setUrlInput('') }}
-              className="text-gray-500 hover:text-red-400 px-2 py-1.5 rounded-lg text-xs transition-colors"
-            >
-              초기화
-            </button>
-          )}
-        </div>
-      )}
 
       {/* 본문: 영상(좌) + 채팅(우) */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* 영상 영역 */}
         <div className="flex-1 flex flex-col bg-black overflow-hidden">
-          {embedUrl ? (
-            <iframe
-              src={embedUrl}
+          {streamUrl ? (
+            <video
+              src={streamUrl}
               className="w-full flex-1"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+              autoPlay
+              loop
+              controls
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-700">
@@ -264,9 +203,6 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
               </svg>
               <p className="text-sm opacity-40">스트림 없음</p>
-              {isAdmin && (
-                <p className="text-xs opacity-25">상단 URL 버튼으로 YouTube 링크를 설정하세요</p>
-              )}
             </div>
           )}
 
