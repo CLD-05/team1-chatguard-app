@@ -1,5 +1,6 @@
 package com.chatguard.domain.room.service;
 
+import com.chatguard.domain.chat.service.RoomPresenceService;
 import com.chatguard.domain.room.dto.RoomCreateRequest;
 import com.chatguard.domain.room.dto.RoomResponse;
 import com.chatguard.domain.room.entity.Room;
@@ -17,17 +18,28 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class RoomService {
     private final RoomRepository roomRepository;
+    private final RoomPresenceService roomPresenceService;
 
     public List<RoomResponse> getRooms() {
         return roomRepository.findAll().stream()
-            .map(RoomResponse::from)
+            .map(room -> {
+                int count = (int) roomPresenceService.getSnapshot(room.getId()).get("count");
+                return new RoomResponse(
+                    room.getId(),
+                    room.getName(),
+                    room.getStreamerName(),
+                    room.getCreatedAt(),
+                    count
+                );
+            })
             .toList();
     }
 
     public RoomResponse getRoom(Long roomId) {
         Room room = roomRepository.findById(roomId)
             .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
-        return RoomResponse.from(room);
+        int count = (int) roomPresenceService.getSnapshot(roomId).get("count");
+        return new RoomResponse(room.getId(), room.getName(), room.getStreamerName(), room.getCreatedAt(), count);
     }
 
     @Transactional
@@ -37,7 +49,8 @@ public class RoomService {
             .streamerName(required(request.streamerName(), "streamerName"))
             .build();
 
-        return RoomResponse.from(roomRepository.save(room));
+        Room saved = roomRepository.save(room);
+        return new RoomResponse(saved.getId(), saved.getName(), saved.getStreamerName(), saved.getCreatedAt(), 0);
     }
 
     private String required(String value, String fieldName) {

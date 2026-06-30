@@ -4,6 +4,15 @@ import { useAuth } from '../context/auth-context'
 import { getRooms } from '../api/axios'
 import MainLayout from '../layouts/MainLayout'
 
+const ROOM_THUMBNAILS = {
+  2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/demo1.PNG',
+}
+
+
+function getThumbnail(roomId) {
+  return ROOM_THUMBNAILS[roomId] ?? null
+}
+
 export default function HomePage() {
   const { token, isAdmin } = useAuth()
   const navigate  = useNavigate()
@@ -22,9 +31,9 @@ export default function HomePage() {
 
   return (
     <MainLayout title="ChatGuard">
-      <div className="max-w-2xl w-full mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">채팅방 목록</h2>
+      <div className="max-w-6xl w-full mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-white">라이브 채널</h2>
           {isAdmin && (
             <Link
               to="/admin"
@@ -54,25 +63,38 @@ export default function HomePage() {
           <p className="text-gray-500 text-sm text-center py-12">개설된 채팅방이 없습니다.</p>
         )}
 
-        <div className="space-y-2">
-          {rooms.map((room) => (
-            <button
-              key={room.id}
-              onClick={() => navigate(`/chat/${room.id}`)}
-              className="w-full flex items-center justify-between bg-gray-800 hover:bg-gray-750 border border-gray-700 hover:border-indigo-500 rounded-xl px-4 py-4 transition-colors group text-left"
-            >
-              <div>
-                <p className="font-medium text-white group-hover:text-indigo-300 transition-colors">
-                  {room.name}
-                </p>
-                <p className="text-sm text-gray-400 mt-0.5">스트리머: {room.streamer_name}</p>
-              </div>
-              <svg className="w-5 h-5 text-gray-500 group-hover:text-indigo-400 transition-colors"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {rooms.map((room) => {
+            const thumbnail = getThumbnail(room.id)
+            const viewers = room.presence_count ?? 0
+            return (
+              <button
+                key={room.id}
+                onClick={() => navigate(`/chat/${room.id}`)}
+                className="text-left group"
+              >
+                <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3">
+                  {thumbnail ? (
+                    <img
+                      src={thumbnail}
+                      alt={room.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-black" />
+                  )}
+                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 rounded text-xs text-white">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    {viewers.toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium truncate group-hover:text-indigo-300 transition-colors">{room.name}</p>
+                  <p className="text-gray-400 text-xs mt-0.5">{room.streamer_name}</p>
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
     </MainLayout>
