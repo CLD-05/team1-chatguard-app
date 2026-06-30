@@ -38,7 +38,8 @@ public class RoomService {
     public RoomResponse getRoom(Long roomId) {
         Room room = roomRepository.findById(roomId)
             .orElseThrow(() -> new CustomException(ErrorCode.ROOM_NOT_FOUND));
-        return RoomResponse.from(room);
+        int count = (int) roomPresenceService.getSnapshot(roomId).get("count");
+        return new RoomResponse(room.getId(), room.getName(), room.getStreamerName(), room.getCreatedAt(), count);
     }
 
     @Transactional
@@ -48,7 +49,8 @@ public class RoomService {
             .streamerName(required(request.streamerName(), "streamerName"))
             .build();
 
-        return RoomResponse.from(roomRepository.save(room));
+        Room saved = roomRepository.save(room);
+        return new RoomResponse(saved.getId(), saved.getName(), saved.getStreamerName(), saved.getCreatedAt(), 0);
     }
 
     private String required(String value, String fieldName) {

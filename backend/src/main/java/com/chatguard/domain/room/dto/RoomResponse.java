@@ -1,6 +1,5 @@
 package com.chatguard.domain.room.dto;
 
-import com.chatguard.domain.room.entity.Room;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
@@ -15,13 +14,4 @@ public record RoomResponse(
     @JsonProperty("presence_count")
     int presenceCount
 ) {
-    public static RoomResponse from(Room room) {
-        return new RoomResponse(
-            room.getId(),
-            room.getName(),
-            room.getStreamerName(),
-            room.getCreatedAt(),
-            0
-        );
-    }
 }
