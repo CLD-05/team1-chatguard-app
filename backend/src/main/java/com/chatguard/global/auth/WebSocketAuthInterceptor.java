@@ -30,8 +30,11 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
             return reject(response, HttpStatus.UNAUTHORIZED);
         }
 
-        // 1) 토큰 검증 — 없음/무효 → 401 (D29)
-        String token = servletRequest.getServletRequest().getParameter("token");
+        // 1) 토큰 검증 — Sec-WebSocket-Protocol 헤더에서 추출 (D21·D29)
+        String token = request.getHeaders().getFirst("Sec-WebSocket-Protocol");
+        if (token != null) {
+            token = token.trim();
+        }
         Claims claims = token != null ? jwtProvider.getClaimsIfValid(token) : null;
         if (claims == null) {
             return reject(response, HttpStatus.UNAUTHORIZED);
@@ -55,6 +58,8 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
         if (!roomRepository.existsById(roomId)) {
             return reject(response, HttpStatus.NOT_FOUND);
         }
+
+
 
         attributes.put("userId", Long.parseLong(claims.getSubject()));
         attributes.put("roomId", roomId);
