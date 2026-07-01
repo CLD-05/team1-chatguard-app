@@ -59,8 +59,6 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
             return reject(response, HttpStatus.NOT_FOUND);
         }
 
-
-
         attributes.put("userId", Long.parseLong(claims.getSubject()));
         attributes.put("roomId", roomId);
         attributes.put("displayName", claims.get("display_name", String.class));
