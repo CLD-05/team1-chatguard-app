@@ -124,7 +124,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
     function connect() {
       if (unmounted.current || connectionId.current !== currentConnectionId) return
-      const ws = new WebSocket(`${WS_BASE}?token=${token}&room_id=${roomId}`)
+      const ws = new WebSocket(`${WS_BASE}?room_id=${roomId}`, [token])
       wsRef.current = ws
 
       ws.onopen = () => {
