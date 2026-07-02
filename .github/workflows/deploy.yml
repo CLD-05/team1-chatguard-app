@@ -168,9 +168,7 @@ jobs:
     name: bump overlays/prod image tags
     needs: promote-prod # prod ECR에 세 이미지 전부 복사된 뒤에만 — 반쪽 배포 방지
     runs-on: ubuntu-latest
-    # promote-prod와 같은 environment로 한 게이트에 묶는다.
-    # (GitHub이 job마다 승인을 다시 요구하면 이 선언만 제거 — needs 체인이 게이트를 보존)
-    environment: production
+    # 게이트는 promote-prod 1곳, needs 체인이 이후 job을 보존(7/02 승인 2단계 실측 → 1클릭화)
     concurrency:
       group: deploy-prod
       cancel-in-progress: false
@@ -215,6 +213,26 @@ jobs:
           payload: |
             {
               "text": "${{ needs.update-config.result == 'success' && '✅' || '❌' }} *[Deploy] ${{ github.repository }}*\n브랜치: `${{ github.ref_name }}`\n작업자: ${{ github.actor }}\n빌드: ${{ needs['build-push'].result }} / 배포: ${{ needs['update-config'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOY_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  # prod 경로 전용 알림. 기존 notify에 prod job을 needs로 합치지 않는 이유:
+  # promote-prod가 승인 대기인 동안 notify 전체가 pending이 돼 dev 배포 알림까지
+  # 침묵하는 회귀가 생김. 분리하면 dev 알림 타이밍 불변 + prod 침묵 장애 방지.
+  notify-prod:
+    name: Slack 알림 (prod)
+    needs: [promote-prod, update-config-prod]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
+        with:
+          payload: |
+            {
+              "text": "${{ needs['promote-prod'].result == 'success' && needs['update-config-prod'].result == 'success' && '✅' || '❌' }} *[Deploy·prod] ${{ github.repository }}*\n브랜치: `${{ github.ref_name }}`\n작업자: ${{ github.actor }}\n승격: ${{ needs['promote-prod'].result }} / prod 배포: ${{ needs['update-config-prod'].result }}\n링크: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_DEPLOY_URL }}
