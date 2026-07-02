@@ -124,8 +124,8 @@ team1-chatguard-app/
 
 1. MySQL 및 Redis 실행
 2. Backend 실행
-3. AI Moderation Worker 실행
-4. Frontend 실행
+3. Frontend 실행
+4. AI Moderation Worker 실행
 
 ---
 
