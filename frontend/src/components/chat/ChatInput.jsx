@@ -51,7 +51,7 @@ export default function ChatInput({ onSend, disabled, frozen, errorMessage }) {
         <button
           type="submit"
           disabled={isBlocked || !value.trim()}
-          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-white text-sm font-medium rounded-lg transition-colors shrink-0"
         >
           채팅
         </button>

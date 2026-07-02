@@ -41,7 +41,13 @@ export default function AdminPage() {
       {/* 사이드바 */}
       <aside className="w-52 shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
         <div className="h-12 flex items-center px-4 border-b border-gray-800 gap-2">
-          <Link to="/home" className="font-bold text-white text-sm hover:text-indigo-300 transition-colors">ChatGuard</Link>
+          <Link to="/home" className="hover:opacity-80 transition-opacity">
+            <img
+              src="https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/logo-name.PNG"
+              alt="ChatGuard"
+              className="h-5 object-contain"
+            />
+          </Link>
           <span className="text-xs bg-indigo-900 text-indigo-300 border border-indigo-700 px-2 py-0.5 rounded-full">Admin</span>
         </div>
 
@@ -51,7 +57,7 @@ export default function AdminPage() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left cursor-pointer ${
                 tab === id ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
               }`}
             >
@@ -71,7 +77,7 @@ export default function AdminPage() {
               <p className="text-xs text-gray-500">관리자</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-red-400 transition-colors">
+          <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-red-400 transition-colors cursor-pointer">
             로그아웃
           </button>
         </div>

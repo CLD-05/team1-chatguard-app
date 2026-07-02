@@ -39,13 +39,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">ChatGuard</h1>
+          <img
+            src="https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/logo-login.png"
+            alt="ChatGuard"
+            className="w-40 h-40 mx-auto object-contain -mb-8"
+          />
           <p className="text-gray-400 text-sm mt-1">실시간 AI 검열 채팅 플랫폼</p>
         </div>
 
@@ -81,7 +79,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !username.trim() || !password.trim()}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-xl transition-colors text-sm"
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-xl transition-colors text-sm cursor-pointer disabled:cursor-not-allowed"
           >
             {loading ? '입장 중...' : '입장하기'}
           </button>

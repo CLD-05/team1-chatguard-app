@@ -11,7 +11,7 @@ import { freezeRoom } from '../api/admin'
 const START_INDEX = 1_000_000
 const FONT_SIZE_KEY = 'chat-font-size'
 const ROOM_STREAM_URLS = {
-  2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/demo.mp4',
+  2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/room2-video.mp4',
 }
 
 function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
@@ -125,7 +125,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
       <header className="h-11 bg-gray-900 border-b border-gray-800 flex items-center px-4 gap-3 shrink-0">
         <button
           onClick={() => navigate('/home')}
-          className="text-gray-500 hover:text-white transition-colors"
+          className="text-gray-500 hover:text-white transition-colors cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -155,7 +155,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
           <button
             onClick={() => freezeRoom(roomId, !frozen).catch((e) => console.error('freeze failed', e))}
             title={frozen ? '채팅 재개' : '채팅 얼리기'}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-colors ${
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
               frozen
                 ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/30'
                 : 'border-gray-700 text-gray-500 hover:text-white hover:bg-gray-800 hover:border-gray-600'
@@ -175,7 +175,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
         <span className="text-xs text-gray-600 ml-1">{user?.display_name}</span>
         <button
           onClick={() => { logout(); navigate('/') }}
-          className="text-gray-600 hover:text-red-400 transition-colors ml-1"
+          className="text-gray-600 hover:text-red-400 transition-colors ml-1 cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -256,13 +256,12 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
                 <button
                   key={s}
                   onClick={() => changeFontSize(s)}
-                  className={`w-6 h-6 text-xs rounded transition-colors ${fontSize === s ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:text-gray-300'}`}
+                  className={`w-6 h-6 text-xs rounded transition-colors cursor-pointer ${fontSize === s ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:text-gray-300'}`}
                 >
                   {s}
                 </button>
               ))}
             </div>
-            <span className="text-xs text-gray-700">{visibleMessages.length}</span>
           </div>
 
           {frozen && (
@@ -322,7 +321,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
                   userPausedRef.current = false
                   virtuosoRef.current?.scrollToIndex({ index: 'LAST', behavior: 'smooth' })
                 }}
-                className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-full transition-colors"
+                className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-full transition-colors cursor-pointer"
               >
                 ↓ 최신
               </button>

@@ -5,7 +5,9 @@ import { getRooms } from '../api/axios'
 import MainLayout from '../layouts/MainLayout'
 
 const ROOM_THUMBNAILS = {
-  2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/demo1.PNG',
+  1: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/room1.png',
+  2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/room2.png',
+  3: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/room3.png',
 }
 
 
@@ -30,7 +32,7 @@ export default function HomePage() {
   }, [token])
 
   return (
-    <MainLayout title="ChatGuard">
+    <MainLayout>
       <div className="max-w-6xl w-full mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-white">라이브 채널</h2>
@@ -71,7 +73,7 @@ export default function HomePage() {
               <button
                 key={room.id}
                 onClick={() => navigate(`/chat/${room.id}`)}
-                className="text-left group"
+                className="text-left group cursor-pointer"
               >
                 <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3">
                   {thumbnail ? (
