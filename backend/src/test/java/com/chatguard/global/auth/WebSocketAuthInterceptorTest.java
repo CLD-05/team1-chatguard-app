@@ -113,7 +113,7 @@ class WebSocketAuthInterceptorTest {
                            Map<String, Object> attributes) {
         MockHttpServletRequest servletRequest = new MockHttpServletRequest();
         if (token != null) {
-            servletRequest.setParameter("token", token);
+            servletRequest.addHeader("Sec-WebSocket-Protocol", token);
         }
         if (roomId != null) {
             servletRequest.setParameter("room_id", roomId);

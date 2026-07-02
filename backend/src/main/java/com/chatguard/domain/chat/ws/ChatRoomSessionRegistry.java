@@ -1,8 +1,11 @@
 package com.chatguard.domain.chat.ws;
 
+import com.chatguard.domain.chat.service.RoomPresenceService;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.PingMessage;
@@ -11,24 +14,27 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.CloseStatus;
 
-import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
-public class ChatRoomSessionRegistry {
+public class ChatRoomSessionRegistry implements ApplicationListener<ContextClosedEvent> {
 
     private final ConcurrentHashMap<Long, Map<String, WebSocketSession>> rooms = new ConcurrentHashMap<>();
     private final MeterRegistry meterRegistry;
+    private final RoomPresenceService roomPresenceService;
+    private final AtomicBoolean drained = new AtomicBoolean(false);
 
     @Value("${WS_CONNECTION_CAP:200}")
     private int connectionCap;
 
-    public ChatRoomSessionRegistry(MeterRegistry meterRegistry) {
+    public ChatRoomSessionRegistry(MeterRegistry meterRegistry, RoomPresenceService roomPresenceService) {
         this.meterRegistry = meterRegistry;
+        this.roomPresenceService = roomPresenceService;
         // B-2: ws_active_connections (gauge) 등록
         meterRegistry.gauge("ws_active_connections", this, registry -> 
             registry.rooms.values().stream().mapToInt(Map::size).sum()
@@ -95,11 +101,32 @@ public class ChatRoomSessionRegistry {
         }
     }
 
-    @PreDestroy
-    public void closeAllSessions() {
+    @Override
+    public void onApplicationEvent(ContextClosedEvent event) {
+        if (drained.compareAndSet(false, true)) {
+            closeAllSessions();
+        }
+    }
+
+    private void closeAllSessions() {
         int totalSessions = rooms.values().stream().mapToInt(Map::size).sum();
-        log.info("Graceful Drain: Context closing. Attempting to close {} active sessions with status 1001", totalSessions);
+        log.info("Graceful Drain: Context closed event received. Attempting to clear presence and close {} active sessions with status 1001", totalSessions);
         
+        // 1단계: 동기식 Presence 일괄 청소
+        rooms.forEach((roomId, sessionMap) -> {
+            sessionMap.values().forEach(session -> {
+                Long userId = (Long) session.getAttributes().get("userId");
+                if (userId != null) {
+                    try {
+                        roomPresenceService.leave(roomId, userId);
+                    } catch (Exception e) {
+                        log.warn("Failed to clear presence for roomId={}, userId={} during shutdown", roomId, userId, e);
+                    }
+                }
+            });
+        });
+
+        // 2단계: 안전한 세션 연결 종료
         rooms.values().forEach(sessionMap -> 
             sessionMap.values().forEach(session -> {
                 if (session.isOpen()) {
