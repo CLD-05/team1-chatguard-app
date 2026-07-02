@@ -5,6 +5,10 @@
 #   → config 레포 overlays/dev 이미지 태그를 새 SHA로 커밋
 # PR 검증은 ci.yml 담당(이 파일과 별개). ⑥ 클러스터 반영은 ArgoCD가 config를 보고 수행.
 #
+# prod 경로: dev 배포 성공 → [production environment 승인 게이트] → dev 이미지를
+#   재빌드 없이 crane copy로 prod ECR 승격 → overlays/prod 태그 커밋
+#   (promote-prod / update-config-prod job — RUNBOOK 2-4 수동 절차의 자동화).
+#
 # 사전 조건:
 #   - infra apply: ECR 3개 + OIDC Provider + role (env의 ★ 값 확인)
 #   - app 레포 Secret `CONFIG_REPO_TOKEN`: fine-grained PAT
@@ -31,6 +35,9 @@ env:
   ECR_REGISTRY: 495599735720.dkr.ecr.ap-northeast-2.amazonaws.com
   # ★ infra apply 후 실제 role 이름과 일치하는지 확인
   AWS_ROLE_ARN: arn:aws:iam::495599735720:role/team1-gha-app-dev-role
+  # ★ prod 승격용 — infra github_oidc.tf(prod) role. trust sub 갱신 + dev ECR read
+  #   권한 부여 infra PR apply 전에는 promote-prod의 AssumeRole이 실패한다(순서 의존).
+  AWS_ROLE_ARN_PROD: arn:aws:iam::495599735720:role/team1-gha-app-prod-role
 
 jobs:
   build-push:
@@ -101,6 +108,99 @@ jobs:
           # 변경이 없으면(동일 SHA 재실행 등) 조용히 종료
           git diff --cached --quiet && { echo "no changes"; exit 0; }
           git commit -m "deploy(dev): app@${GITHUB_SHA::7}"
+          git push
+
+  # ---------------------------------------------------------------------------
+  # prod 승격 경로. dev까지 성공한 커밋만 승격 후보가 되고, production environment의
+  # required reviewers 승인이 있어야 진행된다.
+  # 주의: 승인 대기 중에도 이 run이 deploy-dev 그룹을 점유한다 — 승인/거부를 미루면
+  # 후속 main push의 dev 배포가 큐에서 대기한다(최신 1개만 유지). 즉시 처리할 것.
+  promote-prod:
+    name: promote images to prod ECR
+    needs: [build-push, update-config] # dev 배포까지 성공한 커밋만 승격
+    runs-on: ubuntu-latest
+    # ★ GitHub repo Settings > Environments 에 `production`(required reviewers) 수동 생성 필요.
+    #   environment 사용 시 OIDC 토큰 sub가 `environment:production`으로 바뀜 → infra의
+    #   prod role trust 조건도 이 sub로 갱신돼야 AssumeRole 가능(위 AWS_ROLE_ARN_PROD 주석).
+    environment: production
+    # dev(deploy-dev, 워크플로 레벨)와 분리된 prod 전용 직렬화
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Configure AWS credentials (OIDC, prod role)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # crane: 레지스트리→레지스트리 복사(도커 데몬 불필요). manifest·digest를 그대로
+      # 옮기므로 prod 이미지가 dev에서 검증된 산물과 바이트 단위로 동일(재빌드 0).
+      # 버전 고정 + 공식 checksums.txt(v0.20.2) SHA256 검증 — 서드파티 액션 대신 인라인.
+      # uname -m 분기: 현 runs-on(ubuntu-latest)은 x86_64지만 arm 러너 전환에도 안전.
+      - name: Install crane
+        run: |
+          CRANE_VERSION="v0.20.2"
+          case "$(uname -m)" in
+            x86_64)  ARCH="x86_64"; SHA256="c14340087103ba9dadf61d45acd20675490fd0ccbd56ac7901fc1b502137f44b" ;;
+            aarch64) ARCH="arm64"; SHA256="aff0db48825124c9331ea310057214bd4e92c01aa2e414d539e9659841d9422a" ;;
+            *) echo "unsupported runner arch: $(uname -m)" >&2; exit 1 ;;
+          esac
+          curl -sSLo /tmp/crane.tar.gz \
+            "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_${ARCH}.tar.gz"
+          echo "${SHA256}  /tmp/crane.tar.gz" | sha256sum -c -
+          sudo tar -xz -C /usr/local/bin -f /tmp/crane.tar.gz crane
+
+      - name: Copy dev images to prod ECR (tag = git SHA)
+        run: |
+          for r in api-server ai-worker frontend; do
+            crane copy "${ECR_REGISTRY}/team1-dev-${r}:${GITHUB_SHA}" \
+                       "${ECR_REGISTRY}/team1-prod-${r}:${GITHUB_SHA}"
+          done
+
+  update-config-prod:
+    name: bump overlays/prod image tags
+    needs: promote-prod # prod ECR에 세 이미지 전부 복사된 뒤에만 — 반쪽 배포 방지
+    runs-on: ubuntu-latest
+    # promote-prod와 같은 environment로 한 게이트에 묶는다.
+    # (GitHub이 job마다 승인을 다시 요구하면 이 선언만 제거 — needs 체인이 게이트를 보존)
+    environment: production
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      - name: Checkout config repo
+        uses: actions/checkout@v4
+        with:
+          repository: CLD-05/team1-chatguard-config
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+
+      # match-key(name:)는 dev와 동일한 team1-dev-* — overlays/prod의 images 블록이
+      # newName으로 prod ECR을 가리키는 구조라, newName+newTag를 prod 값으로 세팅한다.
+      - name: Set image tags (prod)
+        working-directory: overlays/prod
+        run: |
+          kustomize edit set image \
+            team1-dev-api-server=${ECR_REGISTRY}/team1-prod-api-server:${GITHUB_SHA} \
+            team1-dev-ai-worker=${ECR_REGISTRY}/team1-prod-ai-worker:${GITHUB_SHA} \
+            team1-dev-frontend=${ECR_REGISTRY}/team1-prod-frontend:${GITHUB_SHA}
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+
+      - name: Commit & push
+        run: |
+          git config user.name  "team1-deploy-bot"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add overlays/prod/kustomization.yaml
+          # 변경이 없으면(동일 SHA 재실행 등) 조용히 종료
+          git diff --cached --quiet && { echo "no changes"; exit 0; }
+          git commit -m "deploy(prod): app@${GITHUB_SHA::7}"
           git push
 
   notify:
