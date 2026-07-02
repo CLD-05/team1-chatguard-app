@@ -182,10 +182,10 @@ npm run dev
 cd moderation-worker
 
 #### Windows (PowerShell)
-.\run-unsmile.ps1
+.\run-model.ps1
 
 #### macOS / Linux
-./run-unsmile.sh
+./run-model.sh
 ```
 - **Metrics:** `http://localhost:8000/metrics`
 
@@ -199,7 +199,7 @@ cd moderation-worker
 - `MOD_QUEUE_KEY`
 - `UNSMILE_MODEL_ID`
 
-  > `run-unsmile` 스크립트가 `.env` 파일을 읽어 필요한 환경 변수를 자동으로 설정합니다.
+  > `run-model` 스크립트가 `.env` 파일을 읽어 필요한 환경 변수를 자동으로 설정합니다.
 
 ### 실행 포트
 
