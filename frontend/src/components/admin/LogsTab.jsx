@@ -51,7 +51,7 @@ export default function LogsTab({ guard }) {
         <select
           value={stage}
           onChange={handleStageChange}
-          className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500"
+          className="bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 cursor-pointer"
         >
           <option value="">전체</option>
           <option value="KEYWORD">키워드 (차단만)</option>
@@ -100,11 +100,11 @@ export default function LogsTab({ guard }) {
 
           <div className="flex justify-center gap-2 mt-4">
             <button disabled={cursors.length === 0} onClick={handlePrev}
-              className="px-3 py-1.5 text-xs border border-gray-700 text-gray-400 hover:bg-gray-800 rounded-lg disabled:opacity-30 transition-colors">
+              className="px-3 py-1.5 text-xs border border-gray-700 text-gray-400 hover:bg-gray-800 rounded-lg disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed">
               이전
             </button>
             <button disabled={logs.length < LIMIT} onClick={handleNext}
-              className="px-3 py-1.5 text-xs border border-gray-700 text-gray-400 hover:bg-gray-800 rounded-lg disabled:opacity-30 transition-colors">
+              className="px-3 py-1.5 text-xs border border-gray-700 text-gray-400 hover:bg-gray-800 rounded-lg disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed">
               다음
             </button>
           </div>

@@ -153,7 +153,7 @@ export default function KeywordsTab({ guard }) {
             />
             <button
               onClick={handleAdd}
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer"
             >
               추가
             </button>
@@ -172,7 +172,7 @@ export default function KeywordsTab({ guard }) {
               {activeKeyword && (
                 <button
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-xs"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-xs cursor-pointer"
                 >
                   ✕
                 </button>
@@ -180,7 +180,7 @@ export default function KeywordsTab({ guard }) {
             </div>
             <button
               onClick={handleSearch}
-              className="px-3.5 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+              className="px-3.5 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer"
             >
               검색
             </button>
@@ -240,7 +240,7 @@ export default function KeywordsTab({ guard }) {
                       <td className="px-5 py-3 text-right">
                         <button
                           onClick={() => handleRemove(kw.id)}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
                           title="금칙어 삭제"
                         >
                           ✕
@@ -266,7 +266,7 @@ export default function KeywordsTab({ guard }) {
               <button
                 disabled={page === 0}
                 onClick={() => setPage(page - 1)}
-                className="w-8 h-8 flex items-center justify-center border border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                className="w-8 h-8 flex items-center justify-center border border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
                 title="이전 페이지"
               >
                 ◀
@@ -276,7 +276,7 @@ export default function KeywordsTab({ guard }) {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-lg border transition-all ${
+                  className={`w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
                     p === page
                       ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                       : 'border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white'
@@ -289,7 +289,7 @@ export default function KeywordsTab({ guard }) {
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage(page + 1)}
-                className="w-8 h-8 flex items-center justify-center border border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                className="w-8 h-8 flex items-center justify-center border border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
                 title="다음 페이지"
               >
                 ▶
