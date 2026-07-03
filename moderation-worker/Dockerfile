@@ -41,7 +41,7 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
-COPY --chown=app:app worker.py .
+COPY --chown=app:app worker.py dlq_replay.py ./
 
 USER 999
 EXPOSE 8000

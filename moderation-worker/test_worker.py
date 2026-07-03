@@ -1,8 +1,10 @@
 """Unit tests for worker env/contract defaults and classify routing (AUDIT P1-9)."""
+import json
 import os
 import subprocess
 import sys
 
+import dlq_replay
 import worker
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -80,3 +82,89 @@ def test_non_mock_mode_routes_to_real_model(monkeypatch):
     worker.classify("안녕하세요")
 
     assert called.get("hit") == "안녕하세요"
+
+
+def test_dlq_replay_skips_invalid_payload():
+    options = dlq_replay.ReplayOptions(
+        limit=10,
+        dry_run=True,
+        message_id=None,
+        allowed_error_keywords=tuple(),
+        blocked_error_keywords=tuple(),
+        max_replay_count=3,
+    )
+
+    eligible, reason = dlq_replay.evaluate_job({"message_id": "m1"}, options)
+
+    assert eligible is False
+    assert reason == "invalid_payload"
+
+
+def test_dlq_replay_dry_run_does_not_move_jobs(monkeypatch):
+    raw = json.dumps({"message_id": "m1", "room_id": 1, "last_error": "RedisError"})
+    redis_client = FakeRedis({dlq_replay.DLQ_QUEUE_KEY: [raw], dlq_replay.MOD_QUEUE_KEY: []})
+    options = dlq_replay.ReplayOptions(
+        limit=10,
+        dry_run=True,
+        message_id=None,
+        allowed_error_keywords=("rediserror",),
+        blocked_error_keywords=tuple(),
+        max_replay_count=3,
+    )
+
+    result = dlq_replay.replay_dlq(redis_client, options)
+
+    assert result == {"scanned": 1, "moved": 1, "skipped": 0}
+    assert redis_client.lists[dlq_replay.DLQ_QUEUE_KEY] == [raw]
+    assert redis_client.lists[dlq_replay.MOD_QUEUE_KEY] == []
+
+
+def test_dlq_replay_apply_moves_job_to_main_queue():
+    raw = json.dumps({
+        "message_id": "m1",
+        "room_id": 1,
+        "retry_count": 3,
+        "last_error": "MySQLError: temporary connection failure",
+        "failed_at": "2026-07-03T00:00:00+00:00",
+    })
+    redis_client = FakeRedis({dlq_replay.DLQ_QUEUE_KEY: [raw], dlq_replay.MOD_QUEUE_KEY: []})
+    options = dlq_replay.ReplayOptions(
+        limit=10,
+        dry_run=False,
+        message_id=None,
+        allowed_error_keywords=("mysqlerror",),
+        blocked_error_keywords=tuple(),
+        max_replay_count=3,
+    )
+
+    result = dlq_replay.replay_dlq(redis_client, options)
+    replayed = json.loads(redis_client.lists[dlq_replay.MOD_QUEUE_KEY][0])
+
+    assert result == {"scanned": 1, "moved": 1, "skipped": 0}
+    assert redis_client.lists[dlq_replay.DLQ_QUEUE_KEY] == []
+    assert replayed["message_id"] == "m1"
+    assert replayed["room_id"] == 1
+    assert replayed["replay_count"] == 1
+    assert "retry_count" not in replayed
+    assert "last_error" not in replayed
+    assert "failed_at" not in replayed
+
+
+class FakeRedis:
+    def __init__(self, lists):
+        self.lists = {key: list(value) for key, value in lists.items()}
+
+    def lrange(self, key, start, end):
+        values = self.lists.get(key, [])
+        if end == -1:
+            return values[start:]
+        return values[start:end + 1]
+
+    def eval(self, _script, _num_keys, dlq_key, queue_key, raw, payload):
+        values = self.lists.setdefault(dlq_key, [])
+        try:
+            values.remove(raw)
+        except ValueError:
+            return 0
+        self.lists.setdefault(queue_key, []).insert(0, payload)
+        return 1
