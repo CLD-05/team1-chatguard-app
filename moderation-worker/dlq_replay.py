@@ -31,6 +31,7 @@ return removed
 @dataclass(frozen=True)
 class ReplayOptions:
     limit: int
+    scan_limit: int
     dry_run: bool
     message_id: str | None
     allowed_error_keywords: tuple[str, ...]
@@ -59,7 +60,14 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Replay safe moderation DLQ jobs back to the main moderation queue."
     )
-    parser.add_argument("--limit", type=int, default=int(os.getenv("DLQ_REPLAY_LIMIT", "20")))
+    default_limit = int(os.getenv("DLQ_REPLAY_LIMIT", "20"))
+    parser.add_argument("--limit", type=int, default=default_limit)
+    parser.add_argument(
+        "--scan-limit",
+        type=int,
+        default=int(os.getenv("DLQ_REPLAY_SCAN_LIMIT", str(max(default_limit * 5, default_limit)))),
+        help="Maximum DLQ entries to scan in one run.",
+    )
     parser.add_argument(
         "--apply",
         action="store_true",
@@ -90,6 +98,7 @@ def parse_args():
     args = parser.parse_args()
     return ReplayOptions(
         limit=max(0, args.limit),
+        scan_limit=max(0, args.scan_limit),
         dry_run=not args.apply,
         message_id=args.message_id,
         allowed_error_keywords=parse_keywords(args.allowed_errors),
@@ -149,7 +158,19 @@ def evaluate_job(job, options):
 
 def replay_dlq(redis_client, options):
     scanned = moved = skipped = 0
-    for raw in redis_client.lrange(DLQ_QUEUE_KEY, 0, -1):
+    if options.limit == 0 or options.scan_limit == 0:
+        log(
+            "dlq replay finished "
+            f"dry_run={options.dry_run} "
+            "scanned=0 "
+            "selected_or_moved=0 "
+            "skipped=0 "
+            f"dlq={DLQ_QUEUE_KEY} "
+            f"queue={MOD_QUEUE_KEY}"
+        )
+        return {"scanned": 0, "moved": 0, "skipped": 0}
+
+    for raw in redis_client.lrange(DLQ_QUEUE_KEY, 0, options.scan_limit - 1):
         if moved >= options.limit:
             break
         scanned += 1

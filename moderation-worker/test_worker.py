@@ -95,6 +95,7 @@ def test_non_mock_mode_routes_to_real_model(monkeypatch):
 def test_dlq_replay_skips_invalid_payload():
     options = dlq_replay.ReplayOptions(
         limit=10,
+        scan_limit=10,
         dry_run=True,
         message_id=None,
         allowed_error_keywords=tuple(),
@@ -113,6 +114,7 @@ def test_dlq_replay_dry_run_does_not_move_jobs(monkeypatch):
     redis_client = FakeRedis({dlq_replay.DLQ_QUEUE_KEY: [raw], dlq_replay.MOD_QUEUE_KEY: []})
     options = dlq_replay.ReplayOptions(
         limit=10,
+        scan_limit=10,
         dry_run=True,
         message_id=None,
         allowed_error_keywords=("rediserror",),
@@ -138,6 +140,7 @@ def test_dlq_replay_apply_moves_job_to_main_queue():
     redis_client = FakeRedis({dlq_replay.DLQ_QUEUE_KEY: [raw], dlq_replay.MOD_QUEUE_KEY: []})
     options = dlq_replay.ReplayOptions(
         limit=10,
+        scan_limit=10,
         dry_run=False,
         message_id=None,
         allowed_error_keywords=("mysqlerror",),
@@ -158,11 +161,35 @@ def test_dlq_replay_apply_moves_job_to_main_queue():
     assert "failed_at" not in replayed
 
 
+def test_dlq_replay_scan_limit_bounds_redis_lrange():
+    jobs = [
+        json.dumps({"message_id": f"m{i}", "room_id": 1, "last_error": "RedisError"})
+        for i in range(5)
+    ]
+    redis_client = FakeRedis({dlq_replay.DLQ_QUEUE_KEY: jobs, dlq_replay.MOD_QUEUE_KEY: []})
+    options = dlq_replay.ReplayOptions(
+        limit=10,
+        scan_limit=2,
+        dry_run=True,
+        message_id=None,
+        allowed_error_keywords=("rediserror",),
+        blocked_error_keywords=tuple(),
+        max_replay_count=3,
+    )
+
+    result = dlq_replay.replay_dlq(redis_client, options)
+
+    assert result == {"scanned": 2, "moved": 2, "skipped": 0}
+    assert redis_client.lrange_calls == [(dlq_replay.DLQ_QUEUE_KEY, 0, 1)]
+
+
 class FakeRedis:
     def __init__(self, lists):
         self.lists = {key: list(value) for key, value in lists.items()}
+        self.lrange_calls = []
 
     def lrange(self, key, start, end):
+        self.lrange_calls.append((key, start, end))
         values = self.lists.get(key, [])
         if end == -1:
             return values[start:]

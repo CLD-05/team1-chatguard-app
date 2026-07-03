@@ -131,6 +131,7 @@ DLQ replay CronJob 전용 환경변수:
 | 변수 | 기본값 | 설명 |
 | --- | --- | --- |
 | `DLQ_REPLAY_LIMIT` | `20` | 한 번에 replay 후보로 볼 최대 job 수 |
+| `DLQ_REPLAY_SCAN_LIMIT` | `100` | 한 번에 DLQ에서 조회할 최대 job 수 |
 | `DLQ_REPLAY_APPLY` | `false` | `true`일 때만 DLQ에서 제거하고 main queue로 재투입 |
 | `DLQ_REPLAY_MESSAGE_ID` | 없음 | 특정 `message_id`만 replay |
 | `DLQ_REPLAY_ALLOWED_ERRORS` | 없음 | replay를 허용할 `last_error` 부분 문자열 목록 |
