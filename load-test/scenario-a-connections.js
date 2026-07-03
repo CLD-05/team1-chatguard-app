@@ -3,6 +3,11 @@
 // 파라미터는 전부 env:
 //   K6_MAX_VUS=300 K6_RAMP=5m K6_HOLD=10m K6_DOWN=5m
 //   K6_SESSION_SECONDS=300 K6_SEND_INTERVAL_SECONDS=30 K6_ROOMS=1,2,3
+//
+// 실험 전후 노드 스냅샷(필수 절차):
+//   kubectl describe nodes | grep -A5 'Allocated resources'
+//   kubectl get pods -n chatguard --field-selector=status.phase=Pending
+// Pending 파드 = 실패가 아니라 "노드 천장 발견" — 실험 노트에 그대로 기록.
 import { sleep } from 'k6';
 import { loginOnce, pickRoom, chatSession } from './lib/common.js';
 
