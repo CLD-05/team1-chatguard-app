@@ -15,6 +15,7 @@ from prometheus_client import Counter, Histogram, start_http_server
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 # A-5 env 계약 키만 읽는다(비계약 폴백 REDIS_QUEUE_NAME 제거).
 MOD_QUEUE_KEY = os.getenv("MOD_QUEUE_KEY", "mod:queue")
 PROCESSING_QUEUE_KEY = os.getenv("PROCESSING_QUEUE_KEY", f"{MOD_QUEUE_KEY}:processing")
@@ -462,6 +463,7 @@ def main():
     redis_client = redis.Redis(
         host=REDIS_HOST,
         port=REDIS_PORT,
+        password=REDIS_PASSWORD,
         decode_responses=True,
     )
 

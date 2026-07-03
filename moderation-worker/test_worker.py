@@ -14,6 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 _CLEARED_KEYS = [
     "MODERATOR_MODE",
     "METRICS_PORT",
+    "REDIS_PASSWORD",
     "MOD_QUEUE_KEY",
     "REDIS_QUEUE_NAME",
     "DB_USER",
@@ -44,6 +45,13 @@ def test_explicit_mock_mode_is_honored():
 def test_metrics_port_is_fixed_8000():
     assert worker_const("METRICS_PORT", {"METRICS_PORT": "9999"}) == 8000
 
+
+def test_redis_password_defaults_to_none():
+    assert worker_const("REDIS_PASSWORD") is None
+
+
+def test_redis_password_reads_contract_key():
+    assert worker_const("REDIS_PASSWORD", {"REDIS_PASSWORD": "redis-secret"}) == "redis-secret"
 
 
 def test_mod_queue_key_ignores_noncontract_alias():

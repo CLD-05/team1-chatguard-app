@@ -108,6 +108,7 @@ export REDIS_HOST=localhost REDIS_PORT=6379 MOD_QUEUE_KEY=mod:queue ROOM_CHANNEL
 | --- | --- | --- |
 | `REDIS_HOST` | `localhost` | Redis 호스트 |
 | `REDIS_PORT` | `6379` | Redis 포트 |
+| `REDIS_PASSWORD` | 없음 | Redis 인증 비밀번호 |
 | `MOD_QUEUE_KEY` | `mod:queue` | 검열 작업 큐 |
 | `PROCESSING_QUEUE_KEY` | `mod:queue:processing` | 처리 중 작업 큐 |
 | `DLQ_QUEUE_KEY` | `mod:queue:dlq` | 실패 작업 큐 |
