@@ -19,7 +19,7 @@ K6_HOST=127.0.0.1:8080 K6_USERNAME=<시드계정> K6_PASSWORD=<평문> k6 run lo
 |---|---|
 | `smoke.js` | VU 3 · 1분 — 로그인 100%·WS 연결 >99%·self-echo ≥1 검증 |
 | `scenario-a-connections.js` | 실험 A: WS 접속 램프업 → chat-server HPA scale-out/in |
-| `scenario-b-messages.js` | 실험 B: 메시지 폭주 → `mod:queue` 적체 → KEDA worker scale-out |
+| `scenario-b-messages.js` | 실험 B: 메시지 폭주 → `mod:queue` 적체 → KEDA worker scale-out. `K6_TOXIC_RATIO`로 독성 문장 혼입(2차 AI 차단 → 검열지연 SLI 기록 유발) |
 | `lib/common.js` | 로그인 + WS 세션 공통 (위 프로토콜 구현) |
 
 ## env (자격증명·호스트 하드코딩 금지)
@@ -33,3 +33,8 @@ K6_HOST=127.0.0.1:8080 K6_USERNAME=<시드계정> K6_PASSWORD=<평문> k6 run lo
 | `K6_SESSION_SECONDS` / `K6_SEND_INTERVAL_SECONDS` | | 시나리오별 | WS 세션 길이 / 송신 간격 |
 | `K6_MAX_VUS` `K6_RAMP` `K6_HOLD` `K6_DOWN` | | A: 300/5m/10m/5m | 실험 A 램프 파라미터 |
 | `K6_VUS` `K6_DURATION` | | B: 50/15m | 실험 B 고정 VU 파라미터 |
+| `K6_TOXIC_RATIO` | | B: `0.1` | (scenario-b 전용) 해당 확률로 독성 문장 풀에서 선택 전송 — `moderation_e2e_seconds`(blur 경로에서만 기록)를 찍기 위한 옵션. `0`이면 독성 없음(smoke는 항상 0) |
+
+독성 문장 풀 규칙: `시발`/`씨발` **단독형**만 — 1차 키워드는 복합형(`시발놈`·`씨발년` 등) substring 매칭이라 복합형이 섞이면 즉시 차단되어 큐(2차 AI)에 못 들어간다. 풀이 1차 금칙어와 충돌하면(전송이 `blocked_keyword`로 잡히고 `hide_received_total`이 0이면) 어드민 키워드 목록과 대조해 `lib/common.js`의 `TOXIC_POOL` 문장을 교체한다.
+
+교차 검증: `toxic_sent_total`(독성 전송 수) ↔ `hide_received_total`(수신한 `moderation.hide` 수 — 방 전체 브로드캐스트라 **≈ 독성 전송 수 × 방 인원**). 서버 히스토그램과 별개의 클라이언트 도달 증거. 독성 문장은 마커 없이 전송되므로 `self_echo_total`에는 안 잡힌다.
