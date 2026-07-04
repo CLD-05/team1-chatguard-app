@@ -27,6 +27,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      # E5: Lettuce commandTimeout — Redis 장애 시 health redis contributor 응답을 3s 내로 상한
+      timeout: 3s
 
 jwt:
   secret: ${JWT_SECRET}
@@ -46,6 +48,10 @@ management:
   endpoint:
     health:
       show-details: always
+      # E5: /actuator/health/liveness·/readiness 노출 고정 (K8s 플랫폼 자동감지 비의존)
+      # liveness group=livenessState만(Redis 무관) — liveness=프로세스 생존, readiness=의존성
+      probes:
+        enabled: true
   # 리뷰 반영 [권장 해결]: p95 관측을 위한 Histogram 노출 설정
   metrics:
     distribution:
