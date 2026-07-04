@@ -3,6 +3,11 @@ import { getMessages, setMockWsHandler, simulateModerationHide, USE_MOCK } from 
 
 
 const MAX_MESSAGES = 500
+// 트림을 매 flush(80ms)마다 하면, 메시지 폭주 상황에서 "추가"와 "트림"이 거의 항상
+// 동시에 일어나 Virtuoso가 끝에 새 항목이 붙는 것조차 제대로 인식 못 하는 문제가 생긴다.
+// TRIM_THRESHOLD까지는 그냥 쌓이게 두고, 넘었을 때만 한 번에 MAX_MESSAGES로 정리해서
+// 트림 발생 빈도 자체를 크게 낮춘다(추가만 일어나는 구간을 길게 확보).
+const TRIM_THRESHOLD = 700
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL
   ?? (import.meta.env.DEV
@@ -14,7 +19,7 @@ function mockUlid() {
   return 'MOCK' + Date.now().toString(36).toUpperCase().padStart(22, '0')
 }
 
-export default function useChat({ roomId, token, userId, displayName, onFatalError }) {
+export default function useChat({ roomId, token, userId, displayName, onFatalError, onTrim }) {
   const [messages, setMessages] = useState([])
   const [connected, setConnected] = useState(USE_MOCK)
   const [hasMore, setHasMore] = useState(true)
@@ -66,7 +71,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       bufferRef.current = []
       setMessages((prev) => {
         const combined = [...prev, ...batch]
-        if (combined.length > MAX_MESSAGES) {
+        if (combined.length > TRIM_THRESHOLD) {
           const trimmed = combined.slice(0, combined.length - MAX_MESSAGES)
           const visibleRemoved = trimmed.filter((m) => m.status !== 'DELETED').length
           trimmedRef.current += visibleRemoved
@@ -74,9 +79,12 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         }
         return combined
       })
+      // setMessages와 같은 타이머 틱 안에서 동기 호출 — React가 한 렌더로 배칭 처리해,
+      // "메시지는 갱신됐는데 firstItemIndex는 아직 안 맞은" 렌더가 끼는 걸 막는다.
+      onTrim?.(trimmedRef.current)
     }, 80)
     return () => clearInterval(t)
-  }, [])
+  }, [onTrim])
 
   const loadMore = useCallback(async (before) => {
     const history = await getMessages(roomId, before)
