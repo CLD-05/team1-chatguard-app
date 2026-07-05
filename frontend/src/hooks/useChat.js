@@ -82,7 +82,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       // setMessages와 같은 타이머 틱 안에서 동기 호출 — React가 한 렌더로 배칭 처리해,
       // "메시지는 갱신됐는데 firstItemIndex는 아직 안 맞은" 렌더가 끼는 걸 막는다.
       onTrim?.(trimmedRef.current)
-    }, 80)
+    }, 30)
     return () => clearInterval(t)
   }, [onTrim])
 
