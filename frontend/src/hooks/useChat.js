@@ -22,6 +22,7 @@ function mockUlid() {
 export default function useChat({ roomId, token, userId, displayName, onFatalError, onTrim }) {
   const [messages, setMessages] = useState([])
   const [connected, setConnected] = useState(USE_MOCK)
+  const [connectionStatus, setConnectionStatus] = useState(USE_MOCK ? 'CONNECTED' : 'RECONNECTING')
   const [hasMore, setHasMore] = useState(true)
   const [wsError, setWsError] = useState(null) // { code, message }
   const [frozen, setFrozen] = useState(false)
@@ -132,6 +133,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
     function connect() {
       if (unmounted.current || connectionId.current !== currentConnectionId) return
+      setConnectionStatus('RECONNECTING')
       const ws = new WebSocket(`${WS_BASE}?room_id=${roomId}`, [token])
       wsRef.current = ws
 
@@ -139,6 +141,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         if (unmounted.current || connectionId.current !== currentConnectionId) { ws.close(); return }
         retryDelay.current = 1_000
         setConnected(true)
+        setConnectionStatus('CONNECTED')
         setWsError(null)
         if (isReconnect.current) {
           getMessages(roomId).then((latest) => {
@@ -163,11 +166,13 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       ws.onclose = (event) => {
         setConnected(false)
         if (event.code === 1008) {
+          setConnectionStatus('DISCONNECTED')
           // 인증·프로토콜 위반 — 재연결 없이 로그인 화면으로
           onFatalError?.()
           return
         }
         if (!unmounted.current) {
+          setConnectionStatus('RECONNECTING')
           // 1001(서버 드레인) 즉시 재연결, 그 외 jittered exponential backoff
           const delay = event.code === 1001 ? 0 : Math.random() * retryDelay.current
           reconnectTimer.current = setTimeout(connect, delay)
@@ -176,12 +181,28 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
           } else {
             retryDelay.current = 1_000
           }
+        } else {
+          setConnectionStatus('DISCONNECTED')
         }
       }
       ws.onerror = () => ws.close()
     }
 
     connect()
+
+    const handleOnline = () => {
+      if (unmounted.current) return
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        if (reconnectTimer.current) {
+          clearTimeout(reconnectTimer.current)
+          reconnectTimer.current = null
+        }
+        retryDelay.current = 1_000
+        connect()
+      }
+    }
+    window.addEventListener('online', handleOnline)
+
     return () => {
       unmounted.current = true
       if (reconnectTimer.current) {
@@ -189,6 +210,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         reconnectTimer.current = null
       }
       wsRef.current?.close()
+      window.removeEventListener('online', handleOnline)
     }
   }, [roomId, token, handleEvent, onFatalError])
 
@@ -221,5 +243,5 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
   const clearWsError = useCallback(() => setWsError(null), [])
 
-  return { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence, trimmedRef }
+  return { messages, connected, connectionStatus, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence, trimmedRef }
 }
