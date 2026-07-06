@@ -98,7 +98,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     }
   }, [])
 
-  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
+  const { messages, connected, connectionStatus, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
     roomId,
     token,
     userId: user?.id ?? 0,
@@ -172,7 +172,11 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
           {room && <span className="text-gray-500 text-xs shrink-0">{room.streamer_name}</span>}
         </div>
 
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${connected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`} />
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+          connectionStatus === 'CONNECTED' ? 'bg-green-400' :
+          connectionStatus === 'RECONNECTING' ? 'bg-yellow-400 animate-pulse' :
+          'bg-red-500'
+        }`} />
 
         <div className="flex-1" />
 
@@ -258,8 +262,16 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
                 <p className="text-xs text-gray-500">{room?.streamer_name}</p>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-red-500 animate-pulse' : 'bg-gray-600'}`} />
-                <span className="text-xs text-gray-500">{connected ? 'LIVE' : 'OFFLINE'}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  connectionStatus === 'CONNECTED' ? 'bg-red-500 animate-pulse' :
+                  connectionStatus === 'RECONNECTING' ? 'bg-yellow-500 animate-pulse' :
+                  'bg-gray-600'
+                }`} />
+                <span className="text-xs text-gray-500">
+                  {connectionStatus === 'CONNECTED' ? 'LIVE' :
+                   connectionStatus === 'RECONNECTING' ? 'RECONNECTING' :
+                   'OFFLINE'}
+                </span>
               </div>
             </div>
           </div>
@@ -362,7 +374,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
             </div>
           )}
 
-          <ChatInput onSend={sendMessage} disabled={!connected} frozen={frozen} errorMessage={wsError?.message} />
+          <ChatInput onSend={sendMessage} connectionStatus={connectionStatus} frozen={frozen} errorMessage={wsError?.message} />
         </div>
       </div>
     </div>

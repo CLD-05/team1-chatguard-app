@@ -2,10 +2,10 @@ import { useState } from 'react'
 
 const MAX_LENGTH = 500
 
-export default function ChatInput({ onSend, disabled, frozen, errorMessage }) {
+export default function ChatInput({ onSend, connectionStatus, frozen, errorMessage }) {
   const [value, setValue] = useState('')
 
-  const isBlocked = disabled || frozen
+  const isBlocked = connectionStatus !== 'CONNECTED' || frozen
 
   function submit() {
     const trimmed = value.trim()
@@ -25,7 +25,8 @@ export default function ChatInput({ onSend, disabled, frozen, errorMessage }) {
 
   function placeholder() {
     if (frozen) return '채팅이 일시중지되었습니다'
-    if (disabled) return '연결 중...'
+    if (connectionStatus === 'RECONNECTING') return '서버와 연결이 끊어졌습니다. 재접속 중...'
+    if (connectionStatus === 'DISCONNECTED') return '연결이 단절되었습니다'
     return '채팅 메시지 보내기'
   }
 
@@ -42,9 +43,13 @@ export default function ChatInput({ onSend, disabled, frozen, errorMessage }) {
           onKeyDown={handleKeyDown}
           disabled={isBlocked}
           placeholder={placeholder()}
-          className={`flex-1 text-gray-100 rounded-lg px-3 py-2 text-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+          className={`flex-1 text-gray-100 rounded-lg px-3 py-2 text-sm outline-none disabled:opacity-60 disabled:cursor-not-allowed transition-colors ${
             frozen
               ? 'bg-cyan-900/20 placeholder-cyan-700 border border-cyan-800/40 focus:ring-1 focus:ring-cyan-700'
+              : connectionStatus === 'RECONNECTING'
+              ? 'bg-yellow-950/10 placeholder-yellow-700/60 border border-yellow-900/30'
+              : connectionStatus === 'DISCONNECTED'
+              ? 'bg-red-950/10 placeholder-red-700/60 border border-red-900/30'
               : 'bg-gray-800 placeholder-gray-500 focus:ring-1 focus:ring-indigo-500'
           }`}
         />
