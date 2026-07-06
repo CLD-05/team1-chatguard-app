@@ -217,7 +217,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
           {streamUrl ? (
             <video
               src={streamUrl}
-              className="w-full flex-1"
+              className="w-full flex-1 min-h-0"
               autoPlay
               loop
               controls

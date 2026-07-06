@@ -28,7 +28,7 @@ export default memo(function MessageItem({ message, isOwn, fontSize = 'M' }) {
         {isBlurred ? (
           <span className="relative inline">
             <span className="blur-sm select-none text-gray-400">{message.content}</span>
-            <span className="ml-1.5 text-[10px] font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded-full align-middle">
+            <span className="ml-1.5 text-[10px] font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded-full align-middle whitespace-nowrap">
               AI 검열
             </span>
           </span>
