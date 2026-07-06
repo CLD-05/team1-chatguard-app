@@ -1,6 +1,6 @@
 -- V3__DemoAccounts.sql
 -- 시연(로컬 데모 녹화)용 테스트 계정 — 여러 명이 동시에 채팅하는 것처럼 보이게 하기 위한 용도.
--- password는 전부 lhc 계정과 동일(password123) — 같은 bcrypt 해시를 재사용해도 검증엔 문제없음.
+-- password는 전부 lhc 계정과 동일한 값 — 같은 bcrypt 해시를 재사용해도 검증엔 문제없음.
 -- 시연 끝나면 이 파일 삭제하고 DB 재생성(docker-compose down -v && up -d)할 것.
 
 INSERT INTO users (username, password, display_name, role, created_at)
@@ -24,8 +24,7 @@ VALUES
     ('viewer17', '$2a$10$wbgFU/NZWgrxZr9WPhgGJutriDzG3SJzDq1SBJvlkD.Wo8yDkzMNS', '김철수1234', 'USER', UTC_TIMESTAMP()),
     ('viewer18', '$2a$10$wbgFU/NZWgrxZr9WPhgGJutriDzG3SJzDq1SBJvlkD.Wo8yDkzMNS', '오늘의운세', 'USER', UTC_TIMESTAMP()),
     ('viewer19', '$2a$10$wbgFU/NZWgrxZr9WPhgGJutriDzG3SJzDq1SBJvlkD.Wo8yDkzMNS', '핑크퐁팬클럽', 'USER', UTC_TIMESTAMP()),
-    ('viewer20', '$2a$10$wbgFU/NZWgrxZr9WPhgGJutriDzG3SJzDq1SBJvlkD.Wo8yDkzMNS', '달려라하니', 'USER', UTC_TIMESTAMP()),
-    ('admin2',   '$2a$10$wbgFU/NZWgrxZr9WPhgGJutriDzG3SJzDq1SBJvlkD.Wo8yDkzMNS', 'admin', 'ADMIN', UTC_TIMESTAMP());
+    ('viewer20', '$2a$10$wbgFU/NZWgrxZr9WPhgGJutriDzG3SJzDq1SBJvlkD.Wo8yDkzMNS', '달려라하니', 'USER', UTC_TIMESTAMP());
 
 -- 시연용 방 이름/채널명 갱신 (기존 V1 시드는 그대로 두고 UPDATE만) + 방 3개 추가
 UPDATE rooms SET name = '이스포츠 네이션스컵 결승 중계', streamer_name = 'MSI 중계채널' WHERE id = 1;
