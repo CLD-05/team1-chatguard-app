@@ -31,6 +31,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   const wsRef = useRef(null)
   const retryDelay = useRef(1_000)
   const unmounted = useRef(false)
+  const isOffline = useRef(false)
   const connectionId = useRef(0)
   const reconnectTimer = useRef(null)
   const stabilityTimer = useRef(null) // 5초 안정성 확인용 타이머 추가
@@ -200,7 +201,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
           onFatalError?.()
           return
         }
-        if (!unmounted.current) {
+        if (!unmounted.current && !isOffline.current) {
           setConnectionStatus('RECONNECTING')
           // 1001(서버 드레인) 즉시 재연결, 그 외 jittered exponential backoff
           const delay = event.code === 1001 ? 0 : Math.random() * retryDelay.current
@@ -221,22 +222,28 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
     const handleOnline = () => {
       if (unmounted.current) return
-      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-        if (reconnectTimer.current) {
-          clearTimeout(reconnectTimer.current)
-          reconnectTimer.current = null
-        }
-        retryDelay.current = 1_000
-        connect()
+      isOffline.current = false
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
       }
+      retryDelay.current = 1_000
+      connect()
     }
     const handleOffline = () => {
       if (unmounted.current) return
+      isOffline.current = true
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
+      if (stabilityTimer.current) {
+        clearTimeout(stabilityTimer.current)
+        stabilityTimer.current = null
+      }
       setConnected(false)
       setConnectionStatus('DISCONNECTED')
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      wsRef.current?.close()
     }
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)

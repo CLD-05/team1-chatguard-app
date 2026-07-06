@@ -413,6 +413,8 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin, hasHistoryRo
               <p className="text-[10px] opacity-80 leading-tight">
                 {connectionStatus === 'RECONNECTING' 
                   ? '네트워크 연결을 복구하고 있습니다...' 
+                  : !navigator.onLine
+                  ? '네트워크 연결이 유실되었습니다. 인터넷 상태를 확인해 주세요.'
                   : '인증이 만료되었거나 서버가 점검 중입니다.'}
               </p>
             </div>
