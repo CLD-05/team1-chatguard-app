@@ -19,7 +19,7 @@ function mockUlid() {
   return 'MOCK' + Date.now().toString(36).toUpperCase().padStart(22, '0')
 }
 
-export default function useChat({ roomId, token, userId, displayName, onFatalError, onTrim }) {
+export default function useChat({ roomId, token, userId, displayName, onFatalError, onTrim, enabled = true }) {
   const [messages, setMessages] = useState([])
   const [connected, setConnected] = useState(USE_MOCK)
   const [connectionStatus, setConnectionStatus] = useState(USE_MOCK ? 'CONNECTED' : 'RECONNECTING')
@@ -33,6 +33,7 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   const unmounted = useRef(false)
   const connectionId = useRef(0)
   const reconnectTimer = useRef(null)
+  const stabilityTimer = useRef(null) // 5초 안정성 확인용 타이머 추가
   const bufferRef = useRef([])
   const isReconnect = useRef(false)
   const trimmedRef = useRef(0)
@@ -104,6 +105,21 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
   }, [roomId])
 
   useEffect(() => {
+    if (!enabled) {
+      setConnected(false)
+      setConnectionStatus('DISCONNECTED')
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
+      if (stabilityTimer.current) {
+        clearTimeout(stabilityTimer.current)
+        stabilityTimer.current = null
+      }
+      wsRef.current?.close()
+      return
+    }
+
     const currentConnectionId = connectionId.current + 1
     connectionId.current = currentConnectionId
     unmounted.current = false
@@ -134,15 +150,25 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
     function connect() {
       if (unmounted.current || connectionId.current !== currentConnectionId) return
       setConnectionStatus('RECONNECTING')
+      if (stabilityTimer.current) {
+        clearTimeout(stabilityTimer.current)
+        stabilityTimer.current = null
+      }
       const ws = new WebSocket(`${WS_BASE}?room_id=${roomId}`, [token])
       wsRef.current = ws
 
       ws.onopen = () => {
         if (unmounted.current || connectionId.current !== currentConnectionId) { ws.close(); return }
-        retryDelay.current = 1_000
         setConnected(true)
         setConnectionStatus('CONNECTED')
         setWsError(null)
+
+        // 연결 수립 후 5초간 끊어지지 않고 유지될 때만 딜레이를 1초로 리셋
+        stabilityTimer.current = setTimeout(() => {
+          retryDelay.current = 1_000
+          stabilityTimer.current = null
+        }, 5000)
+
         if (isReconnect.current) {
           getMessages(roomId).then((latest) => {
             if (unmounted.current) return
@@ -165,6 +191,11 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
       ws.onmessage = (e) => handleEvent(JSON.parse(e.data))
       ws.onclose = (event) => {
         setConnected(false)
+        if (stabilityTimer.current) {
+          // 5초 이내에 끊어졌으므로 안정성 타이머를 제거하고 백오프 딜레이는 유지
+          clearTimeout(stabilityTimer.current)
+          stabilityTimer.current = null
+        }
         if (event.code === 1008) {
           setConnectionStatus('DISCONNECTED')
           // 인증·프로토콜 위반 — 재연결 없이 로그인 화면으로
@@ -201,7 +232,16 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         connect()
       }
     }
+    const handleOffline = () => {
+      if (unmounted.current) return
+      setConnected(false)
+      setConnectionStatus('DISCONNECTED')
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
     window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
     return () => {
       unmounted.current = true
@@ -209,10 +249,15 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
         clearTimeout(reconnectTimer.current)
         reconnectTimer.current = null
       }
+      if (stabilityTimer.current) {
+        clearTimeout(stabilityTimer.current)
+        stabilityTimer.current = null
+      }
       wsRef.current?.close()
       window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
-  }, [roomId, token, handleEvent, onFatalError])
+  }, [roomId, token, handleEvent, onFatalError, enabled])
 
   const sendMessage = useCallback((content) => {
     setWsError(null)

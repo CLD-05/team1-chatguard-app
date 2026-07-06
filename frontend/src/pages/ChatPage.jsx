@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { useParams, Navigate, useNavigate } from 'react-router-dom'
+import { useParams, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { useAuth } from '../context/auth-context'
 import useChat from '../hooks/useChat'
@@ -14,7 +14,7 @@ const ROOM_STREAM_URLS = {
   2: 'https://chatguard-media-712789089571-ap-northeast-2-an.s3.ap-northeast-2.amazonaws.com/room2-video.mp4',
 }
 
-function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
+function ChatRoom({ roomId, user, token, logout, navigate, isAdmin, hasHistoryRoom }) {
   const [room, setRoom] = useState(null)
   const [streamUrl] = useState(() => ROOM_STREAM_URLS[roomId] ?? '')
   const [chatWidth, setChatWidth] = useState(() => Math.min(400, Math.floor(window.innerWidth / 2)))
@@ -105,6 +105,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     displayName: user?.display_name ?? '익명',
     onFatalError,
     onTrim,
+    enabled: hasHistoryRoom || !!room, // 검증된 경로면 즉시 연결, 직접 URL 기입 진입 시에만 REST 완료 후 연결
   })
 
   useEffect(() => {
@@ -114,8 +115,12 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
   }, [wsError, clearWsError])
 
   useEffect(() => {
-    getRoom(roomId).then(setRoom).catch(() => {})
-  }, [roomId])
+    getRoom(roomId)
+      .then(setRoom)
+      .catch(() => {
+        navigate('/home', { replace: true })
+      })
+  }, [roomId, navigate])
 
   useEffect(() => {
     if (import.meta.env.DEV) window.__chatMessages__ = messages
@@ -125,6 +130,16 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     () => messages.filter((m) => m.status !== 'DELETED'),
     [messages],
   )
+
+  const inputError = useMemo(() => {
+    if (!wsError) return null
+    return (wsError.code === 'MESSAGE_BLOCKED' || wsError.code === 'CHAT_FROZEN') ? wsError.message : null
+  }, [wsError])
+
+  const toastError = useMemo(() => {
+    if (!wsError) return null
+    return (wsError.code !== 'MESSAGE_BLOCKED' && wsError.code !== 'CHAT_FROZEN') ? wsError : null
+  }, [wsError])
 
   const renderItem = useCallback(
     (_i, m) => <MessageItem message={m} isOwn={m.user_id === user?.id} fontSize={fontSize} />,
@@ -374,8 +389,58 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
             </div>
           )}
 
-          <ChatInput onSend={sendMessage} connectionStatus={connectionStatus} frozen={frozen} errorMessage={wsError?.message} />
+          <ChatInput onSend={sendMessage} connectionStatus={connectionStatus} frozen={frozen} errorMessage={inputError} />
         </div>
+      </div>
+
+      {/* 플로팅 알림 배너 시스템 (레이아웃 침범 없는 fixed z-50 배치) */}
+      <div className="fixed top-14 right-4 z-50 flex flex-col gap-2 max-w-xs sm:max-w-sm w-full pointer-events-none">
+        
+        {/* A. 연결 문제 지속 배너 (RECONNECTING / DISCONNECTED) */}
+        {connectionStatus !== 'CONNECTED' && (
+          <div className={`p-3 rounded-lg shadow-xl border flex items-center gap-2.5 transition-all duration-300 transform translate-y-0 opacity-100 ${
+            connectionStatus === 'RECONNECTING'
+              ? 'bg-yellow-950/90 border-yellow-800 text-yellow-300'
+              : 'bg-red-950/90 border-red-800 text-red-300'
+          }`}>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${
+              connectionStatus === 'RECONNECTING' ? 'bg-yellow-400 animate-pulse' : 'bg-red-500'
+            }`} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold">
+                {connectionStatus === 'RECONNECTING' ? '재접속 시도 중' : '서버 연결 끊김'}
+              </p>
+              <p className="text-[10px] opacity-80 leading-tight">
+                {connectionStatus === 'RECONNECTING' 
+                  ? '네트워크 연결을 복구하고 있습니다...' 
+                  : '인증이 만료되었거나 서버가 점검 중입니다.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* B. 일시적 에러 경보 토스트 */}
+        {toastError && (
+          <div className="p-3 bg-red-950/95 border border-red-800 text-red-200 rounded-lg shadow-xl flex items-start gap-2.5 transition-all duration-300 transform translate-y-0 opacity-100 animate-pulse">
+            <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold">전송/보안 경고</p>
+              <p className="text-[10px] opacity-80 leading-tight">{toastError.message}</p>
+            </div>
+            <button 
+              onClick={clearWsError}
+              className="text-red-400 hover:text-white transition-colors cursor-pointer pointer-events-auto shrink-0"
+              title="닫기"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   )
@@ -385,10 +450,13 @@ export default function ChatPage() {
   const { id } = useParams()
   const { user, token, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const roomId = Number(id)
 
   if (!token) return <Navigate to="/" replace />
   if (!id || isNaN(roomId)) return <Navigate to="/home" replace />
+
+  const hasHistoryRoom = location.state?.roomExist || false
 
   return (
     <ChatRoom
@@ -398,6 +466,7 @@ export default function ChatPage() {
       logout={logout}
       navigate={navigate}
       isAdmin={isAdmin}
+      hasHistoryRoom={hasHistoryRoom}
     />
   )
 }
