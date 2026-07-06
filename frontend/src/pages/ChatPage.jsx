@@ -98,7 +98,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin, hasHistoryRo
     }
   }, [])
 
-  const { messages, connected, connectionStatus, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
+  const { messages, connectionStatus, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
     roomId,
     token,
     userId: user?.id ?? 0,

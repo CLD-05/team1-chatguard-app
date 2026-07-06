@@ -13,7 +13,7 @@ vi.mock('../api/axios', () => ({
 
 describe('useChat Hook - 웹소켓 장애 대응 로직 단위 테스트', () => {
   let mockWebSocketInstance
-  const originalWebSocket = global.WebSocket
+  const originalWebSocket = globalThis.WebSocket
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -33,11 +33,11 @@ describe('useChat Hook - 웹소켓 장애 대응 로직 단위 테스트', () =>
         return mockWebSocketInstance
       }
     }
-    global.WebSocket = MockWebSocket
+    globalThis.WebSocket = MockWebSocket
   })
 
   afterEach(() => {
-    global.WebSocket = originalWebSocket
+    globalThis.WebSocket = originalWebSocket
     vi.useRealTimers()
     vi.clearAllMocks()
   })

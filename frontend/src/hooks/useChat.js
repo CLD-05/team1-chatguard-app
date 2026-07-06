@@ -106,8 +106,6 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
   useEffect(() => {
     if (!enabled) {
-      setConnected(false)
-      setConnectionStatus('DISCONNECTED')
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current)
         reconnectTimer.current = null
@@ -288,5 +286,21 @@ export default function useChat({ roomId, token, userId, displayName, onFatalErr
 
   const clearWsError = useCallback(() => setWsError(null), [])
 
-  return { messages, connected, connectionStatus, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence, trimmedRef }
+  // 리렌더링 병목을 방지하는 React 권장 상태 유도(Derived State) 기법 적용
+  const derivedConnected = enabled ? connected : false;
+  const derivedConnectionStatus = enabled ? connectionStatus : 'DISCONNECTED';
+
+  return {
+    messages,
+    connected: derivedConnected,
+    connectionStatus: derivedConnectionStatus,
+    sendMessage,
+    loadMore,
+    hasMore,
+    wsError,
+    clearWsError,
+    frozen,
+    presence,
+    trimmedRef
+  }
 }
