@@ -53,12 +53,58 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
   const onFatalError = useCallback(() => { logout(); navigate('/') }, [logout, navigate])
 
-  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence, trimmedRef } = useChat({
+  const virtuosoRef = useRef(null)
+  const userPausedRef = useRef(false)
+  const notAtBottomTimerRef = useRef(null)
+  const resumeGraceUntilRef = useRef(0)
+  const [atBottom, setAtBottom] = useState(true)
+  const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem(FONT_SIZE_KEY) ?? 'M')
+  const lastTrimProcessedRef = useRef(0)
+
+  // "바닥 아님" 판정 후 걸어둔 0.2초 유예 타이머를 취소한다. 살아있는 채로 두면
+  // (버튼 클릭·폰트 변경 등으로) userPausedRef를 false로 되돌려도 타이머가 뒤늦게
+  // 발동해 다시 true로 덮어써버린다.
+  const cancelPauseTimer = useCallback(() => {
+    if (notAtBottomTimerRef.current) {
+      clearTimeout(notAtBottomTimerRef.current)
+      notAtBottomTimerRef.current = null
+    }
+  }, [])
+
+  const changeFontSize = useCallback((size) => {
+    setFontSize(size)
+    localStorage.setItem(FONT_SIZE_KEY, size)
+    // 폰트 크기가 바뀌면 보이는 메시지들의 높이가 한꺼번에 바뀌어 Virtuoso가 재측정한다.
+    // "최신" 버튼과 동일한 처방: 대기 중인 유예 타이머를 지우고, 관성 휠 오탐 방지 유예도 걸고,
+    // 자동 스크롤을 따라가던 중이었다면 재측정 후에도 바닥에 붙어있도록 즉시 재보정한다.
+    cancelPauseTimer()
+    resumeGraceUntilRef.current = Date.now() + 400
+    if (!userPausedRef.current) {
+      requestAnimationFrame(() => {
+        virtuosoRef.current?.scrollToIndex({ index: 'LAST', behavior: 'auto' })
+      })
+    }
+  }, [cancelPauseTimer])
+
+  // useChat의 버퍼 flush(setMessages)와 같은 타이머 틱 안에서 동기 호출된다 — React가
+  // 한 렌더로 배칭 처리해, "메시지는 갱신됐는데 firstItemIndex는 아직 안 맞은" 렌더가
+  // 끼는 걸 막는다(기존엔 messages 변화를 뒤늦게 감지하는 별도 useEffect였음).
+  const onTrim = useCallback((totalTrimmed) => {
+    const delta = totalTrimmed - lastTrimProcessedRef.current
+    if (delta > 0) {
+      lastTrimProcessedRef.current = totalTrimmed
+      setFirstItemIndex((i) => i + delta)
+    }
+  }, [])
+
+  const { messages, connected, sendMessage, loadMore, hasMore, wsError, clearWsError, frozen, presence } = useChat({
     roomId,
     token,
     userId: user?.id ?? 0,
     displayName: user?.display_name ?? '익명',
     onFatalError,
+    onTrim,
   })
 
   useEffect(() => {
@@ -66,27 +112,6 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
     const t = setTimeout(clearWsError, 3_000)
     return () => clearTimeout(t)
   }, [wsError, clearWsError])
-
-  const virtuosoRef = useRef(null)
-  const userPausedRef = useRef(false)
-  const notAtBottomTimerRef = useRef(null)
-  const [atBottom, setAtBottom] = useState(true)
-  const [firstItemIndex, setFirstItemIndex] = useState(START_INDEX)
-  const [fontSize, setFontSize] = useState(() => localStorage.getItem(FONT_SIZE_KEY) ?? 'M')
-  const lastTrimProcessedRef = useRef(0)
-
-  const changeFontSize = useCallback((size) => {
-    setFontSize(size)
-    localStorage.setItem(FONT_SIZE_KEY, size)
-  }, [])
-
-  useEffect(() => {
-    const delta = trimmedRef.current - lastTrimProcessedRef.current
-    if (delta > 0) {
-      lastTrimProcessedRef.current = trimmedRef.current
-      setFirstItemIndex((i) => i + delta)
-    }
-  }, [messages])
 
   useEffect(() => {
     getRoom(roomId).then(setRoom).catch(() => {})
@@ -286,7 +311,11 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
 
           <Virtuoso
             ref={(r) => { virtuosoRef.current = r; if (import.meta.env.DEV) window.__virtuoso__ = r }}
-            onWheel={(e) => { if (e.deltaY < 0) userPausedRef.current = true }}
+            onWheel={(e) => {
+              // "최신" 버튼으로 막 재개한 직후엔, 트랙패드/마우스 관성으로 뒤늦게 들어오는
+              // 위쪽 휠 이벤트가 방금 켠 자동 스크롤을 곧바로 다시 꺼버리는 걸 막는다.
+              if (e.deltaY < 0 && Date.now() > resumeGraceUntilRef.current) userPausedRef.current = true
+            }}
             data={visibleMessages}
             firstItemIndex={firstItemIndex}
             computeItemKey={(_, m) => m.id}
@@ -296,10 +325,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
             atBottomStateChange={(b) => {
               if (b) {
                 userPausedRef.current = false
-                if (notAtBottomTimerRef.current) {
-                  clearTimeout(notAtBottomTimerRef.current)
-                  notAtBottomTimerRef.current = null
-                }
+                cancelPauseTimer()
               } else {
                 // 200ms 후에도 여전히 바닥이 아니면 사용자가 의도적으로 스크롤한 것으로 판단
                 notAtBottomTimerRef.current = setTimeout(() => {
@@ -319,7 +345,15 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin }) {
               <button
                 onClick={() => {
                   userPausedRef.current = false
-                  virtuosoRef.current?.scrollToIndex({ index: 'LAST', behavior: 'smooth' })
+                  // 클릭 전에 걸려있던 "바닥 아님" 0.2초 유예 타이머가 살아있으면, 지우지 않을 경우
+                  // 클릭 직후 뒤늦게 발동해 방금 false로 바꾼 userPausedRef를 다시 true로 덮어써버린다.
+                  cancelPauseTimer()
+                  // 실제 트랙패드/마우스 관성 스크롤로 뒤늦게 들어오는 위쪽 휠 이벤트가
+                  // 방금 재개한 것을 곧바로 다시 꺼버리는 걸 0.4초간 무시한다.
+                  resumeGraceUntilRef.current = Date.now() + 400
+                  // smooth 애니메이션은 메시지가 계속 쏟아지는 상황에서 목표(바닥)가 계속 더
+                  // 밀려나 영원히 못 따라잡는다 — 즉시 점프(auto)로 바닥에 확실히 도달시킨다.
+                  virtuosoRef.current?.scrollToIndex({ index: 'LAST', behavior: 'auto' })
                 }}
                 className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-full transition-colors cursor-pointer"
               >
