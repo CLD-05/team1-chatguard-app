@@ -75,7 +75,14 @@ export default function HomePage() {
             return (
               <button
                 key={room.id}
-                onClick={() => navigate(`/chat/${room.id}`, { state: { roomExist: true } })}
+                onClick={() => {
+                  // 시연 녹화 임시 훅 — 2번방 입장 시 로컬 데모 트리거 서버(demo-trigger.js) 호출.
+                  // localhost:4000이 없으면 조용히 실패하고 정상 입장됨. 시연 끝나면 이 if 블록 제거할 것.
+                  if (room.id === 2) {
+                    fetch('http://localhost:4000/start', { method: 'POST' }).catch(() => {})
+                  }
+                  navigate(`/chat/${room.id}`, { state: { roomExist: true } })
+                }}
                 className="text-left group cursor-pointer"
               >
                 <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3">
