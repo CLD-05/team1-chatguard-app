@@ -145,7 +145,7 @@ cp .env.example .env
 # .env 파일에서 'DB_PASSWORD', 'JWT_SECRET', `AWS_PROFILE`(로컬 AWS CLI 프로필명)을 설정합니다.
 
 #### Windows (PowerShell / CMD)
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 
 #### macOS / Linux
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
