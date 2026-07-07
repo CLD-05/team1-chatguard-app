@@ -39,6 +39,7 @@ class WebSocketAuthInterceptorTest {
         Claims claims = mock(Claims.class);
         lenient().when(claims.getSubject()).thenReturn("7");
         lenient().when(claims.get("display_name", String.class)).thenReturn("viewer7");
+        lenient().when(claims.get("role", String.class)).thenReturn("ADMIN");
         lenient().when(jwtProvider.getClaimsIfValid(VALID_TOKEN)).thenReturn(claims);
         lenient().when(roomRepository.existsById(EXISTING_ROOM_ID)).thenReturn(true);
         lenient().when(roomRepository.existsById(MISSING_ROOM_ID)).thenReturn(false);
@@ -55,7 +56,8 @@ class WebSocketAuthInterceptorTest {
         assertThat(servletResponse.getStatus()).isEqualTo(HttpStatus.OK.value());
         assertThat(attributes).containsEntry("userId", 7L)
             .containsEntry("roomId", EXISTING_ROOM_ID)
-            .containsEntry("displayName", "viewer7");
+            .containsEntry("displayName", "viewer7")
+            .containsEntry("role", "ADMIN");
     }
 
     @Test

@@ -64,12 +64,17 @@ public class ChatService {
 
     @Transactional
     public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto) {
+        return sendMessage(userId, displayName, dto, "USER");
+    }
+
+    @Transactional
+    public SendMessageResult sendMessage(Long userId, String displayName, ChatSendDto dto, String role) {
         // B-1: chat.send 수신 시점부터 타이머 시작
         Timer.Sample sample = Timer.start(meterRegistry);
 
         Long roomId = required(dto.roomId(), "room_id");
 
-        if (roomFreezeService.isFrozen(roomId)) {
+        if (!"ADMIN".equals(role) && roomFreezeService.isFrozen(roomId)) {
             return SendMessageResult.BLOCKED_FROZEN;
         }
 

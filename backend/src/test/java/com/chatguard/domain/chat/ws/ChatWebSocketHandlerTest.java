@@ -62,13 +62,13 @@ class ChatWebSocketHandlerTest {
         TextMessage textMessage = new TextMessage(payload);
 
         // 서비스 검열 차단 결과 모킹
-        when(chatService.sendMessage(eq(100L), eq("UserA"), any())).thenReturn(SendMessageResult.BLOCKED_KEYWORD);
+        when(chatService.sendMessage(eq(100L), eq("UserA"), any(), any())).thenReturn(SendMessageResult.BLOCKED_KEYWORD);
 
         // When
         handler.handleTextMessage(session, textMessage);
 
         // Then: 1) chatService.sendMessage가 1회 실행됨
-        verify(chatService, times(1)).sendMessage(eq(100L), eq("UserA"), any());
+        verify(chatService, times(1)).sendMessage(eq(100L), eq("UserA"), any(), any());
 
         // Then: 2) 사용자 세션에 MESSAGE_BLOCKED 에러 프레임이 실시간 전송됨
         ArgumentCaptor<TextMessage> textMessageCaptor = ArgumentCaptor.forClass(TextMessage.class);
@@ -97,13 +97,13 @@ class ChatWebSocketHandlerTest {
         String payload = "{\"type\":\"chat.send\",\"payload\":{\"room_id\":1,\"content\":\"안녕하세요 정상 메시지\"}}";
         TextMessage textMessage = new TextMessage(payload);
 
-        when(chatService.sendMessage(eq(100L), eq("UserA"), any())).thenReturn(SendMessageResult.SENT);
+        when(chatService.sendMessage(eq(100L), eq("UserA"), any(), any())).thenReturn(SendMessageResult.SENT);
 
         // When
         handler.handleTextMessage(session, textMessage);
 
         // Then: 1) chatService.sendMessage가 정상적으로 위임 호출됨
-        verify(chatService, times(1)).sendMessage(eq(100L), eq("UserA"), any());
+        verify(chatService, times(1)).sendMessage(eq(100L), eq("UserA"), any(), any());
         
         // Then: 2) 세션 오류 응답이 전송되지 않음
         verify(session, never()).sendMessage(any());

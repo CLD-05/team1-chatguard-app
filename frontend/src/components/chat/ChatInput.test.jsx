@@ -62,3 +62,26 @@ describe('ChatInput - connectionStatus 기반 3단계 UI/UX 대응', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 })
+
+describe('ChatInput - 관리자(ADMIN) 채팅 얼음 모드 우회', () => {
+  it('방이 얼어있을 때 일반 사용자는 입력창이 잠기고 중지 안내가 표시된다', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} frozen={true} isAdmin={false} />)
+    const input = screen.getByPlaceholderText('채팅이 일시중지되었습니다')
+    expect(input.disabled).toBe(true)
+  })
+
+  it('방이 얼어있을 때 관리자(ADMIN)는 입력창이 활성화되고 전용 안내가 표시된다', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} frozen={true} isAdmin={true} />)
+    const input = screen.getByPlaceholderText('관리자 권한으로 메시지를 전송합니다.')
+    expect(input.disabled).toBe(false)
+  })
+
+  it('방이 얼어있고 관리자(ADMIN)이지만, 서버 연결이 끊어진 경우(DISCONNECTED) 입력창이 물리적으로 잠긴다', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} frozen={true} isAdmin={true} connectionStatus="DISCONNECTED" />)
+    const input = screen.getByPlaceholderText('연결이 단절되었습니다')
+    expect(input.disabled).toBe(true)
+  })
+})

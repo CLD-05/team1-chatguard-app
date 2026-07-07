@@ -389,7 +389,7 @@ function ChatRoom({ roomId, user, token, logout, navigate, isAdmin, hasHistoryRo
             </div>
           )}
 
-          <ChatInput onSend={sendMessage} connectionStatus={connectionStatus} frozen={frozen} errorMessage={inputError} />
+          <ChatInput onSend={sendMessage} connectionStatus={connectionStatus} frozen={frozen} errorMessage={inputError} isAdmin={isAdmin} />
         </div>
       </div>
 

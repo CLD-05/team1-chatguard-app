@@ -2,10 +2,12 @@ import { useState } from 'react'
 
 const MAX_LENGTH = 500
 
-export default function ChatInput({ onSend, connectionStatus, disabled, frozen, errorMessage }) {
+export default function ChatInput({ onSend, connectionStatus, disabled, frozen, errorMessage, isAdmin }) {
   const [value, setValue] = useState('')
 
-  const isBlocked = disabled || (connectionStatus !== undefined ? connectionStatus !== 'CONNECTED' : false) || frozen
+  const isConnectionLost = connectionStatus !== undefined ? connectionStatus !== 'CONNECTED' : false
+  const isFrozenBlocked = frozen && !isAdmin
+  const isBlocked = disabled || isConnectionLost || isFrozenBlocked
 
   function submit() {
     const trimmed = value.trim()
@@ -24,10 +26,12 @@ export default function ChatInput({ onSend, connectionStatus, disabled, frozen, 
   }
 
   function placeholder() {
-    if (frozen) return '채팅이 일시중지되었습니다'
-    if (disabled) return '연결 중...'
     if (connectionStatus === 'RECONNECTING') return '서버와 연결이 끊어졌습니다. 재접속 중...'
     if (connectionStatus === 'DISCONNECTED') return '연결이 단절되었습니다'
+    if (disabled) return '연결 중...'
+    if (frozen) {
+      return isAdmin ? '관리자 권한으로 메시지를 전송합니다.' : '채팅이 일시중지되었습니다'
+    }
     return '채팅 메시지 보내기'
   }
 

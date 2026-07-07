@@ -102,7 +102,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
 
             try {
-                SendMessageResult result = chatService.sendMessage(userId, displayName, dto);
+                String role = getRole(session);
+                SendMessageResult result = chatService.sendMessage(userId, displayName, dto, role);
                 if (result == SendMessageResult.BLOCKED_KEYWORD) {
                     sendError(session, "MESSAGE_BLOCKED", "금칙어가 포함되어 있습니다.");
                 } else if (result == SendMessageResult.BLOCKED_FROZEN) {
@@ -150,6 +151,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private String getDisplayName(WebSocketSession session) {
         return (String) session.getAttributes().get("displayName");
+    }
+
+    private String getRole(WebSocketSession session) {
+        return (String) session.getAttributes().get("role");
     }
 
     private void sendError(WebSocketSession session, String code, String message) throws Exception {

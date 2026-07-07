@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class ChatServiceSendMessageTest {
 
@@ -107,5 +108,27 @@ class ChatServiceSendMessageTest {
         verify(messageRepository, never()).save(any());
         verify(moderationQueueProducer, never()).enqueue(any(), any(), any());
         verify(moderationLogService, never()).saveInNewTransaction(any());
+    }
+
+    @Test
+    void freeze_상태에서도_ADMIN_권한을_가진_사용자는_메시지_전송이_가능하다() {
+        // Given
+        when(roomFreezeService.isFrozen(1L)).thenReturn(true);
+        when(messageRepository.save(any())).thenReturn(mock(com.chatguard.domain.chat.entity.Message.class));
+
+        try {
+            TransactionSynchronizationManager.initSynchronization();
+
+            // When
+            SendMessageResult result = chatService.sendMessage(7L, "admin7",
+                new ChatSendDto(1L, "안녕하세요 관리자 메시지입니다"), "ADMIN");
+
+            // Then
+            assertThat(result).isEqualTo(SendMessageResult.SENT);
+            verify(messageRepository).save(any());
+            verify(moderationQueueProducer).enqueue(any(), any(), any());
+        } finally {
+            TransactionSynchronizationManager.clear();
+        }
     }
 }
