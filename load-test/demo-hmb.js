@@ -4,8 +4,9 @@
 // 팀원 소유 lib/common.js·scenario-*.js는 건드리지 않고 완전히 독립된 파일로 분리했다.
 //
 // 보통은 demo-trigger.js가 이 스크립트를 대신 실행한다(K6_HOST·K6_TEST_START 자동 주입).
+// K6_PASSWORD는 파일에 넣지 않고 매번 실행 시 넘긴다(lib/common.js·README.md와 동일 컨벤션).
 // 수동 실행 시 예시(Git Bash):
-//   K6_HOST=<ALB 도메인 또는 127.0.0.1:8080> \
+//   K6_HOST=<ALB 도메인 또는 127.0.0.1:8080> K6_PASSWORD=<viewer1~20 비밀번호> \
 //   K6_TEST_START=$(node -e "console.log(Date.now())") \
 //   k6 run load-test/demo-hmb.js
 import http from 'k6/http';
@@ -23,9 +24,9 @@ const HTTP_BASE = `${TLS ? 'https' : 'http'}://${HOST}`;
 const WS_BASE = `${TLS ? 'wss' : 'ws'}://${HOST}`;
 
 // 계정 하나로만 접속하면 채팅창에 같은 닉네임이 도배돼서 "여러 명"처럼 안 보인다.
-// V2__DemoAccounts.sql로 심어둔 viewer1~20(전부 password123)을 VU 번호로 순환 배정해
+// V3__DemoAccounts.sql로 심어둔 viewer1~20(전부 동일 비밀번호)을 VU 번호로 순환 배정해
 // 서로 다른 닉네임이 섞여 나오게 한다.
-const DEMO_PASSWORD = 'password123';
+const DEMO_PASSWORD = __ENV.K6_PASSWORD;
 function demoUsername() {
   return `viewer${((__VU - 1) % 20) + 1}`;
 }
