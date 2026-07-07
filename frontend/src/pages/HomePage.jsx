@@ -75,7 +75,7 @@ export default function HomePage() {
             return (
               <button
                 key={room.id}
-                onClick={() => navigate(`/chat/${room.id}`)}
+                onClick={() => navigate(`/chat/${room.id}`, { state: { roomExist: true } })}
                 className="text-left group cursor-pointer"
               >
                 <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden mb-3">

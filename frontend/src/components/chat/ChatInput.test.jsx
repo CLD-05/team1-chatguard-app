@@ -35,3 +35,30 @@ describe('ChatInput - IME 조합 처리', () => {
     expect(onSend).toHaveBeenCalledWith('가나다')
   })
 })
+
+describe('ChatInput - connectionStatus 기반 3단계 UI/UX 대응', () => {
+  it('connectionStatus가 RECONNECTING이면 입력창이 잠기고 재접속 중 안내가 표시된다', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} connectionStatus="RECONNECTING" />)
+    const input = screen.getByPlaceholderText('서버와 연결이 끊어졌습니다. 재접속 중...')
+    expect(input.disabled).toBe(true)
+  })
+
+  it('connectionStatus가 DISCONNECTED이면 입력창이 잠기고 단절 안내가 표시된다', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} connectionStatus="DISCONNECTED" />)
+    const input = screen.getByPlaceholderText('연결이 단절되었습니다')
+    expect(input.disabled).toBe(true)
+  })
+
+  it('비활성화 상태(RECONNECTING)일 때 전송 시도는 완전 차단된다', () => {
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} connectionStatus="RECONNECTING" />)
+    const input = screen.getByPlaceholderText('서버와 연결이 끊어졌습니다. 재접속 중...')
+    
+    // 강제 값 변경 후 엔터 이벤트 주입
+    fireEvent.change(input, { target: { value: '안녕' } })
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: false })
+    expect(onSend).not.toHaveBeenCalled()
+  })
+})
