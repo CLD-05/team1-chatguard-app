@@ -1,3 +1,14 @@
+# 관련 레포지토리
+
+| 레포지토리 | 설명 |
+|---|---|
+| [team1-chatguard-app](https://github.com/CLD-05/team1-chatguard-app) | React 프론트엔드, Spring Boot 백엔드, Python AI 모더레이션 워커 및 CI/CD 파이프라인을 포함하는 메인 저장소 |
+| [team1-chatguard-config](https://github.com/CLD-05/team1-chatguard-config) | Kubernetes Kustomize 매니페스트, ArgoCD Application, KEDA ScaledObject 등 GitOps 배포 구성을 관리하는 저장소 |
+| [team1-chatguard-infra](https://github.com/CLD-05/team1-chatguard-infra) | Terraform을 이용하여 VPC, Subnet, EKS, RDS, ElastiCache, ECR, IAM 등을 프로비저닝하는 인프라 저장소 |
+| [team1-chatguard-context](https://github.com/CLD-05/team1-chatguard-context) | 배포되는 코드가 아니라, 사람과 AI(Claude)가 작업의 기준으로 삼는 규칙·설계·작업지시·도구를 모아둡니다. "어떻게 일할지"의 단일 진실 공급원. |
+
+---
+
 # ChatGuard
 
 **ChatGuard**는 대용량 실시간 라이브 스트리밍 채팅 환경에서 욕설 및 혐오 표현을 **1차 키워드 필터링(동기)**과 **2차 AI 모더레이션(비동기)**의 2단계 구조로 검열하여, 실시간으로 차단하거나 블러 처리하는 안정적인 채팅 플랫폼입니다.
@@ -219,11 +230,3 @@ cd moderation-worker
 | [deploy.yml] | `push` (`main`) | OIDC 기반 AWS 인증 후 ARM64 Docker 이미지를 빌드하여 ECR에 업로드하고, `team1-chatguard-config` 저장소의 `overlays/dev` 이미지 태그를 갱신한 뒤 Slack으로 배포 결과를 알립니다. |
 
 ---
-
-# 관련 레포지토리
-
-| 레포지토리 | 설명 |
-|---|---|
-| [team1-chatguard-app] | React 프론트엔드, Spring Boot 백엔드, Python AI 모더레이션 워커 및 CI/CD 파이프라인을 포함하는 메인 저장소 |
-| team1-chatguard-config | Kubernetes Kustomize 매니페스트, ArgoCD Application, KEDA ScaledObject 등 GitOps 배포 구성을 관리하는 저장소 |
-| team1-chatguard-infra | Terraform을 이용하여 VPC, Subnet, EKS, RDS, ElastiCache, ECR, IAM 등을 프로비저닝하는 인프라 저장소 |
